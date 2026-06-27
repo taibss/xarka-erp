@@ -13,4 +13,5 @@ class Meeting(Base):
     duration_minutes = Column(Integer, default=60)
     created_by = Column(Integer, ForeignKey("employees.id"), nullable=False)
     notes = Column(Text, nullable=True)
+    calendar_event_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import API from '../api'
 import Layout from '../components/Layout'
-import { HiExclamationTriangle, HiCalendarDays, HiCheckCircle, HiXCircle, HiClipboardDocumentCheck, HiChatBubbleLeft, HiChartBar, HiBell } from 'react-icons/hi2'
+import { HiExclamationTriangle, HiCalendarDays, HiCheckCircle, HiXCircle, HiClipboardDocumentCheck, HiChatBubbleLeft, HiChartBar, HiBell, HiVideoCamera, HiXMark } from 'react-icons/hi2'
 
 const TYPE_ICONS = {
     overdue_task: HiExclamationTriangle,
@@ -12,6 +12,8 @@ const TYPE_ICONS = {
     task_assigned: HiClipboardDocumentCheck,
     new_comment: HiChatBubbleLeft,
     daily_digest: HiChartBar,
+    meeting_invited: HiVideoCamera,
+    meeting_cancelled: HiXMark,
 }
 
 const TYPE_COLORS = {
@@ -22,6 +24,8 @@ const TYPE_COLORS = {
     task_assigned: 'var(--info)',
     new_comment: 'var(--accent)',
     daily_digest: '#8b5cf6',
+    meeting_invited: '#3b82f6',
+    meeting_cancelled: 'var(--error)',
 }
 
 function timeAgo(dateStr) {

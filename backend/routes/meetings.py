@@ -9,7 +9,8 @@ from models.meeting_attendee import MeetingAttendee
 from models.task import Task
 from models.employee import Employee
 from utils.auth_utils import get_current_employee
-from services.notify import send_email
+from services.notify import send_email, create_notification
+from services.calendar import create_calendar_event, delete_calendar_event
 
 router = APIRouter()
 
@@ -76,6 +77,35 @@ def create_meeting(
                 subject=f"Meeting invite — {data.title}",
                 body=f"Hi {emp.name},\n\nYou have been invited to a meeting:\n\nTitle: {data.title}\nTime: {data.meeting_time}\nDuration: {data.duration_minutes} minutes\nAgenda: {data.agenda or 'None'}\n\nXarka ERP",
             )
+            create_notification(
+                db=db,
+                employee_id=emp.id,
+                title=f"New meeting: {data.title}",
+                message=f"You've been invited to a meeting on {data.meeting_time.strftime('%d %b, %I:%M %p')}",
+                notif_type="meeting_invited",
+                link="/meetings",
+            )
+
+    attendee_emails = []
+    for emp_id in data.attendee_ids:
+        emp = db.query(Employee).filter(Employee.id == emp_id).first()
+        if emp:
+            attendee_emails.append(emp.email)
+
+    try:
+        event_id = create_calendar_event(
+            organizer_email=current_employee.email,
+            title=data.title,
+            agenda=data.agenda or "",
+            meeting_time=str(data.meeting_time),
+            duration_minutes=data.duration_minutes,
+            attendee_emails=attendee_emails,
+        )
+        if event_id:
+            meeting.calendar_event_id = event_id
+            db.commit()
+    except Exception as e:
+        print(f"Calendar event creation failed: {e}")
 
     return _serialize_meeting(meeting, db)
 
@@ -150,6 +180,15 @@ def delete_meeting(
     if meeting.created_by != current_employee.id and current_employee.role != "admin":
         raise HTTPException(status_code=403, detail="Not allowed")
 
+    if meeting.calendar_event_id:
+        try:
+            delete_calendar_event(
+                organizer_email=current_employee.email,
+                event_id=meeting.calendar_event_id,
+            )
+        except Exception as e:
+            print(f"Calendar event deletion failed: {e}")
+
     attendees = db.query(Employee).join(
         MeetingAttendee, MeetingAttendee.employee_id == Employee.id
     ).filter(MeetingAttendee.meeting_id == meeting.id).all()
@@ -163,6 +202,14 @@ def delete_meeting(
             to=emp.email,
             subject=f"Meeting cancelled — {meeting.title}",
             body=f"Hi {emp.name},\n\nThe meeting '{meeting.title}' scheduled for {meeting.meeting_time} has been cancelled.\n\nXarka ERP",
+        )
+        create_notification(
+            db=db,
+            employee_id=emp.id,
+            title=f"Meeting cancelled: {meeting.title}",
+            message=f"The meeting on {meeting.meeting_time.strftime('%d %b, %I:%M %p')} has been cancelled",
+            notif_type="meeting_cancelled",
+            link="/meetings",
         )
 
     return {"message": "Meeting deleted"}
