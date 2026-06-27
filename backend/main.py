@@ -24,6 +24,7 @@ from routes.directory import router as directory_router
 from routes.profile import router as profile_router
 from routes.announcements import router as announcements_router
 from routes.meetings import router as meetings_router
+import os
 
 
 Base.metadata.create_all(bind=engine)
@@ -37,9 +38,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Xarka ERP", lifespan=lifespan)
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    os.getenv("FRONTEND_URL", ""),
+]
+ALLOWED_ORIGINS = [o for o in ALLOWED_ORIGINS if o]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
