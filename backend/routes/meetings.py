@@ -85,7 +85,7 @@ def get_meetings(
     db: Session = Depends(get_db),
     current_employee: Employee = Depends(get_current_employee),
 ):
-    meeting_ids = {m.meeting_id for m in db.query(MeetingAttendee.employee_id).filter(
+    meeting_ids = {m[0] for m in db.query(MeetingAttendee.meeting_id).filter(
         MeetingAttendee.employee_id == current_employee.id
     ).all()}
 
