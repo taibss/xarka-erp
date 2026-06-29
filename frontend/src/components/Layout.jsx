@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiChartBar, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle } from 'react-icons/hi2'
 import { HiChartPie } from 'react-icons/hi'
+
 import API from '../api'
 
 const navItems = [
@@ -25,7 +26,7 @@ export default function Layout({ children, user, onLogout }) {
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return
-    API.get('/notifications/unread').then(r => setUnreadCount(r.data.count)).catch(() => {})
+    API.get('/notifications/unread').then(r => setUnreadCount(r.data.count)).catch(() => { })
   }, [location.pathname])
 
   return (
@@ -46,7 +47,7 @@ export default function Layout({ children, user, onLogout }) {
       }}>
         {/* Logo */}
         <div style={{
-          width: '40px',
+          width: '60px',
           height: '40px',
           borderRadius: '12px',
           background: 'var(--accent)',
@@ -60,7 +61,7 @@ export default function Layout({ children, user, onLogout }) {
           cursor: 'pointer',
           marginLeft: '6px',
         }} onClick={() => navigate('/dashboard')}>
-          X
+          XARKA
         </div>
 
         {/* Nav Items */}
@@ -150,7 +151,7 @@ export default function Layout({ children, user, onLogout }) {
 
           {/* Logout */}
           <div
-            onClick={onLogout}
+            onClick={() => { if (window.confirm('Are you sure you want to logout?')) onLogout() }}
             style={{
               display: 'flex',
               alignItems: 'center',

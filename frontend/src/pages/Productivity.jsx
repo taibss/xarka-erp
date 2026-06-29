@@ -11,30 +11,18 @@ const PRIORITY_COLORS = {
 
 const RANK_COLORS = ['#f59e0b', '#9ca3af', '#b45309']
 
-const fmtTime = (seconds) => {
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
 export default function Productivity() {
     const [stats, setStats] = useState(null)
     const [leaderboard, setLeaderboard] = useState([])
     const [myTasks, setMyTasks] = useState([])
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState('me')
-    const [elapsed, setElapsed] = useState(0)
     const navigate = useNavigate()
 
     const fetchStats = async () => {
         const res = await API.get('/productivity/me')
         setStats(res.data)
         setMyTasks(res.data.completed_tasks || [])
-        if (res.data.active_task) {
-            const startedAt = new Date(res.data.active_task.started_at + 'Z')
-            setElapsed(Math.floor((Date.now() - startedAt.getTime()) / 1000))
-        } else { setElapsed(0) }
     }
 
     const fetchLeaderboard = async () => {
@@ -46,18 +34,6 @@ export default function Productivity() {
         if (!localStorage.getItem('token')) { navigate('/'); return }
         Promise.all([fetchStats(), fetchLeaderboard()]).finally(() => setLoading(false))
     }, [])
-
-    useEffect(() => {
-        if (!stats?.active_task) return
-        const interval = setInterval(() => setElapsed(e => e + 1), 1000)
-        return () => clearInterval(interval)
-    }, [stats?.active_task])
-
-    const stopTimer = async () => {
-        await API.post('/productivity/timer/stop')
-        await fetchStats()
-        await fetchLeaderboard()
-    }
 
     const handleLogout = () => { localStorage.removeItem('token'); navigate('/') }
 
@@ -86,10 +62,9 @@ export default function Productivity() {
                 ) : tab === 'me' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {/* Stat cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                             {[
                                 { label: 'Tasks Done', value: stats?.tasks_completed, color: 'var(--success)' },
-                                { label: 'Hours Logged', value: `${stats?.total_hours_logged?.toFixed(1)}h`, color: 'var(--info)' },
                                 { label: 'Rank', value: `#${leaderboard.find(e => e.employee_id === stats?.employee_id)?.rank || '—'}`, color: 'var(--accent)' },
                             ].map((s) => (
                                 <div key={s.label} style={{ ...card, textAlign: 'center' }}>
@@ -98,29 +73,6 @@ export default function Productivity() {
                                 </div>
                             ))}
                         </div>
-
-                        {/* Active timer */}
-                        {stats?.active_task ? (
-                            <div style={{ ...card, border: '1.5px solid var(--info)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <p style={{ color: 'var(--info)', fontSize: '13px', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--info)', display: 'inline-block' }} /> Tracking</p>
-                                    <p style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text)' }}>{stats.active_task.task_title}</p>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                    <span style={{ fontSize: '28px', fontWeight: '700', fontVariantNumeric: 'tabular-nums', color: 'var(--info)' }}>
-                                        {fmtTime(elapsed)}
-                                    </span>
-                                    <button onClick={stopTimer} style={{
-                                        padding: '10px 24px', borderRadius: 'var(--radius-xs)', border: 'none',
-                                        background: 'var(--error)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '600',
-                                    }}>Stop</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div style={{ ...card, textAlign: 'center', color: 'var(--text-muted)' }}>
-                                <p style={{ margin: 0, fontSize: '14px' }}>No active timer — start one from the Tasks board</p>
-                            </div>
-                        )}
 
                         {/* Completed tasks */}
                         <div style={card}>
@@ -170,19 +122,10 @@ export default function Productivity() {
                                         <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: 'var(--text)' }}>{entry.name}</p>
                                         {entry.department && <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{entry.department}</p>}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '28px', textAlign: 'right' }}>
-                                        <div>
-                                            <p style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--success)' }}>{entry.tasks_completed}</p>
-                                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>tasks done</p>
-                                        </div>
-                                        <div>
-                                            <p style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--info)' }}>{entry.total_hours_logged?.toFixed(1)}h</p>
-                                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>logged</p>
-                                        </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--success)' }}>{entry.tasks_completed}</p>
+                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>tasks done</p>
                                     </div>
-                                    {entry.active_task && (
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} title="Currently tracking" />
-                                    )}
                                 </div>
                             ))}
                         </div>
