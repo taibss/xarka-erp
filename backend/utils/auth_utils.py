@@ -52,3 +52,17 @@ def get_current_employee(
     if not employee:
         raise HTTPException(status_code=401, detail="Employee not found")
     return employee
+
+def require_admin(
+    current_employee: Employee = Depends(get_current_employee),
+) -> Employee:
+    if current_employee.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_employee
+
+def require_active_employee(
+    current_employee: Employee = Depends(get_current_employee),
+) -> Employee:
+    if not current_employee.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
+    return current_employee

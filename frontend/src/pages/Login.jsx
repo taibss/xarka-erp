@@ -153,7 +153,7 @@ export default function Login() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: '24px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-          Don't have an account? <a href="/register" style={{ color: 'var(--accent)', fontWeight: '500' }}>Sign up</a>
+          Employee accounts are created by administrators.
         </p>
       </div>
     </div>

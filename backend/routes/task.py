@@ -16,14 +16,13 @@ VALID_STATUSES = {"todo", "inprogress", "review", "done"}
 VALID_PRIORITIES = {"low", "medium", "high"}
 
 
-# ── Schemas ──────────────────────────────────────────────────────────────────
-
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[str] = "medium"
     assignee_id: Optional[int] = None
     due_date: Optional[date] = None
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -32,23 +31,25 @@ class TaskUpdate(BaseModel):
     assignee_id: Optional[int] = None
     due_date: Optional[date] = None
 
+
 class MoveTask(BaseModel):
     status: str
+
 
 class CommentCreate(BaseModel):
     content: str
 
+
 class SubtaskCreate(BaseModel):
     title: str
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_task_or_404(task_id: int, db: Session) -> Task:
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
 
 def _serialize_task(task: Task, db: Session) -> dict:
     assignee = db.query(Employee).filter(Employee.id == task.assignee_id).first() if task.assignee_id else None
@@ -82,7 +83,15 @@ def _serialize_task(task: Task, db: Session) -> dict:
     }
 
 
-# ── Task CRUD ─────────────────────────────────────────────────────────────────
+def _can_modify_task(task: Task, employee: Employee) -> bool:
+    if employee.role == "admin":
+        return True
+    if task.created_by == employee.id:
+        return True
+    if task.assignee_id == employee.id:
+        return True
+    return False
+
 
 @router.post("/tasks")
 def create_task(
@@ -174,14 +183,21 @@ def update_task(
     current_employee: Employee = Depends(get_current_employee),
 ):
     task = _get_task_or_404(task_id, db)
-    if data.title is not None: task.title = data.title
-    if data.description is not None: task.description = data.description
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to modify this task")
+
+    if data.title is not None:
+        task.title = data.title
+    if data.description is not None:
+        task.description = data.description
     if data.priority is not None:
         if data.priority not in VALID_PRIORITIES:
             raise HTTPException(status_code=400, detail="Invalid priority")
         task.priority = data.priority
-    if data.assignee_id is not None: task.assignee_id = data.assignee_id
-    if data.due_date is not None: task.due_date = data.due_date
+    if data.assignee_id is not None:
+        task.assignee_id = data.assignee_id
+    if data.due_date is not None:
+        task.due_date = data.due_date
     db.commit()
     db.refresh(task)
     return _serialize_task(task, db)
@@ -197,6 +213,9 @@ def move_task(
     if data.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status")
     task = _get_task_or_404(task_id, db)
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to modify this task")
+
     old_status = task.status
     task.status = data.status
     db.commit()
@@ -222,8 +241,7 @@ def delete_task(
     current_employee: Employee = Depends(get_current_employee),
 ):
     task = _get_task_or_404(task_id, db)
-    # only creator or admin can delete
-    if task.created_by != current_employee.id and current_employee.role != "admin":
+    if not _can_modify_task(task, current_employee):
         raise HTTPException(status_code=403, detail="Not allowed")
     db.query(Comment).filter(Comment.task_id == task_id).delete()
     db.query(Subtask).filter(Subtask.task_id == task_id).delete()
@@ -232,8 +250,6 @@ def delete_task(
     return {"message": "Task deleted"}
 
 
-# ── Comments ──────────────────────────────────────────────────────────────────
-
 @router.post("/tasks/{task_id}/comments")
 def add_comment(
     task_id: int,
@@ -241,7 +257,10 @@ def add_comment(
     db: Session = Depends(get_db),
     current_employee: Employee = Depends(get_current_employee),
 ):
-    _get_task_or_404(task_id, db)
+    task = _get_task_or_404(task_id, db)
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to comment on this task")
+
     comment = Comment(task_id=task_id, author_id=current_employee.id, content=data.content)
     db.add(comment)
     db.commit()
@@ -256,8 +275,7 @@ def add_comment(
     db.add(log)
     db.commit()
 
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if task and task.assignee_id and task.assignee_id != current_employee.id:
+    if task.assignee_id and task.assignee_id != current_employee.id:
         create_notification(
             db=db,
             employee_id=task.assignee_id,
@@ -270,8 +288,6 @@ def add_comment(
     return {"id": comment.id, "content": comment.content, "created_at": comment.created_at, "author": current_employee.name}
 
 
-# ── Subtasks ──────────────────────────────────────────────────────────────────
-
 @router.post("/tasks/{task_id}/subtasks")
 def add_subtask(
     task_id: int,
@@ -279,7 +295,10 @@ def add_subtask(
     db: Session = Depends(get_db),
     current_employee: Employee = Depends(get_current_employee),
 ):
-    _get_task_or_404(task_id, db)
+    task = _get_task_or_404(task_id, db)
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to modify this task")
+
     subtask = Subtask(task_id=task_id, title=data.title)
     db.add(subtask)
     db.commit()
@@ -294,6 +313,10 @@ def toggle_subtask(
     db: Session = Depends(get_db),
     current_employee: Employee = Depends(get_current_employee),
 ):
+    task = _get_task_or_404(task_id, db)
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to modify this task")
+
     subtask = db.query(Subtask).filter(Subtask.id == subtask_id, Subtask.task_id == task_id).first()
     if not subtask:
         raise HTTPException(status_code=404, detail="Subtask not found")
@@ -301,14 +324,3 @@ def toggle_subtask(
     db.commit()
     db.refresh(subtask)
     return {"id": subtask.id, "title": subtask.title, "is_done": subtask.is_done}
-
-
-# ── Employees list (for assignee dropdown) ────────────────────────────────────
-
-@router.get("/employees")
-def list_employees(
-    db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
-):
-    employees = db.query(Employee).filter(Employee.is_active == True).all()
-    return [{"id": e.id, "name": e.name, "department": e.department} for e in employees]

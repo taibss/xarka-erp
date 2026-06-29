@@ -32,17 +32,26 @@ def punch_in(
     now_ist = datetime.now(timezone(ist_offset))
     is_late = now_ist.hour > LATE_THRESHOLD_HOUR or (now_ist.hour == LATE_THRESHOLD_HOUR and now_ist.minute > LATE_THRESHOLD_MINUTE)
 
+    late_by = None
+    if is_late:
+        work_start = now_ist.replace(hour=LATE_THRESHOLD_HOUR, minute=LATE_THRESHOLD_MINUTE, second=0, microsecond=0)
+        late_by = round((now_ist - work_start).total_seconds() / 60, 1)
+
     if existing:
         existing.punch_in = now
         existing.is_late = is_late
+        existing.late_by = late_by
         existing.status = "present"
+        existing.source = "manual"
     else:
         attendance = Attendance(
             employee_id=current_employee.id,
             date=today,
             punch_in=now,
             is_late=is_late,
+            late_by=late_by,
             status="present",
+            source="manual",
         )
         db.add(attendance)
 
@@ -69,6 +78,15 @@ def punch_out(
     now = datetime.utcnow()
     attendance.punch_out = now
     attendance.hours_worked = round((now - attendance.punch_in).total_seconds() / 3600, 2)
+
+    # Calculate early departure (assuming work ends at 19:00 IST)
+    ist_offset = timedelta(hours=5, minutes=30)
+    now_ist = datetime.now(timezone(ist_offset))
+    work_end_hour = 19
+    if now_ist.hour < work_end_hour:
+        early_by = round((work_end_hour * 60 - (now_ist.hour * 60 + now_ist.minute)) / 60, 1)
+        attendance.early_by = early_by
+
     db.commit()
 
     return {
@@ -99,6 +117,7 @@ def get_today(
             "punch_out": attendance.punch_out.isoformat(),
             "hours_worked": attendance.hours_worked,
             "is_late": attendance.is_late,
+            "source": attendance.source or "manual",
         }
 
     if attendance.punch_in:
@@ -106,6 +125,7 @@ def get_today(
             "status": "punched_in",
             "punch_in": attendance.punch_in.isoformat(),
             "is_late": attendance.is_late,
+            "source": attendance.source or "manual",
         }
 
     return {"status": "not_punched"}
@@ -130,6 +150,8 @@ def get_history(
             "punch_out": r.punch_out.isoformat() if r.punch_out else None,
             "hours_worked": r.hours_worked,
             "is_late": r.is_late,
+            "source": r.source or "manual",
+            "synced_at": r.synced_at.isoformat() if r.synced_at else None,
         }
         for r in records
     ]
@@ -156,6 +178,8 @@ def admin_view(
             "hours_worked": r.hours_worked,
             "is_late": r.is_late,
             "is_in_office": r.punch_in and not r.punch_out,
+            "source": r.source or "manual",
+            "synced_at": r.synced_at.isoformat() if r.synced_at else None,
         })
 
     return result
@@ -202,6 +226,8 @@ def admin_employee_history(
                 "punch_out": r.punch_out.isoformat() if r.punch_out else None,
                 "hours_worked": r.hours_worked,
                 "is_late": r.is_late,
+                "source": r.source or "manual",
+                "synced_at": r.synced_at.isoformat() if r.synced_at else None,
             }
             for r in records
         ],

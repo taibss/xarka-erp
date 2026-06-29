@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiChartBar, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle } from 'react-icons/hi2'
+import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiChartBar, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle, HiCog6Tooth, HiBuildingOffice2, HiBriefcase } from 'react-icons/hi2'
 import { HiChartPie } from 'react-icons/hi'
 
 import API from '../api'
@@ -14,10 +14,14 @@ const navItems = [
   { icon: HiCalendar, label: 'Meetings', route: '/meetings' },
   { icon: HiUserGroup, label: 'Directory', route: '/directory' },
   { icon: HiUser, label: 'My Profile', route: '/profile' },
+  { icon: HiBuildingOffice2, label: 'Departments', route: '/departments', adminOnly: true },
+  { icon: HiBriefcase, label: 'Designations', route: '/designations', adminOnly: true },
+  { icon: HiCog6Tooth, label: 'Settings', route: '/settings', adminOnly: true },
 ]
 
 const homeItem = { icon: HiHome, label: 'Home', route: '/dashboard' }
 const teamDashItem = { icon: HiChartPie, label: 'Team Dashboard', route: '/admin' }
+const employeeMgmtItem = { icon: HiUserGroup, label: 'Manage Employees', route: '/employees', adminOnly: true }
 
 export default function Layout({ children, user, onLogout }) {
   const navigate = useNavigate()
@@ -66,7 +70,7 @@ export default function Layout({ children, user, onLogout }) {
 
         {/* Nav Items */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          {[user?.role === 'admin' ? teamDashItem : homeItem, ...navItems].map((item) => {
+          {[user?.role === 'admin' ? teamDashItem : homeItem, ...(user?.role === 'admin' ? [employeeMgmtItem] : []), ...navItems].filter(item => !item.adminOnly || user?.role === 'admin').map((item) => {
             const active = location.pathname === item.route
             return (
               <div

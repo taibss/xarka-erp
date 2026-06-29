@@ -14,4 +14,11 @@ class Attendance(Base):
     punch_out = Column(DateTime, nullable=True)
     hours_worked = Column(Float, nullable=True)
     is_late = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=func.now())
+
+    # Biometric integration fields
+    source = Column(String, default="manual")  # manual, essl, future_provider
+    source_employee_id = Column(String, nullable=True)  # external biometric user ID
+    late_by = Column(Float, nullable=True)  # minutes late
+    early_by = Column(Float, nullable=True)  # minutes left early
+    synced_at = Column(DateTime, nullable=True)  # when biometric data was synced
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
