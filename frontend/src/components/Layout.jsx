@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle, HiCog6Tooth, HiBuildingOffice2, HiBriefcase } from 'react-icons/hi2'
+import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle, HiCog6Tooth, HiBriefcase } from 'react-icons/hi2'
 import { HiChartPie } from 'react-icons/hi'
 
 import API from '../api'
@@ -13,7 +13,6 @@ const navItems = [
   { icon: HiCalendar, label: 'Meetings', route: '/meetings' },
   { icon: HiUserGroup, label: 'Directory', route: '/directory' },
   { icon: HiUser, label: 'My Profile', route: '/profile' },
-  { icon: HiBuildingOffice2, label: 'Departments', route: '/departments', adminOnly: true },
   { icon: HiBriefcase, label: 'Designations', route: '/designations', adminOnly: true },
   { icon: HiCog6Tooth, label: 'Settings', route: '/settings', adminOnly: true },
 ]

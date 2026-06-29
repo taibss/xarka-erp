@@ -13,7 +13,6 @@ import Announcements from './pages/Announcements'
 import Meetings from './pages/Meetings'
 import Settings from './pages/Settings'
 import EmployeeManagement from './pages/EmployeeManagement'
-import DepartmentManagement from './pages/DepartmentManagement'
 import DesignationManagement from './pages/DesignationManagement'
 
 export default function App() {
@@ -34,7 +33,6 @@ export default function App() {
         <Route path="/meetings" element={<Meetings />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/employees" element={<EmployeeManagement />} />
-        <Route path="/departments" element={<DepartmentManagement />} />
         <Route path="/designations" element={<DesignationManagement />} />
       </Routes>
     </BrowserRouter>
