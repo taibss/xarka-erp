@@ -1,24 +1,17 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { getMe } from "../api"
 import API from "../api"
 import Layout from "../components/Layout"
 
-export default function Announcements() {
-    const [user, setUser] = useState(null)
+export default function Announcements({ user }) {
     const [announcements, setAnnouncements] = useState([])
     const [showForm, setShowForm] = useState(false)
     const [form, setForm] = useState({ title: "", body: "" })
     const navigate = useNavigate()
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
-        if (!token) { navigate("/"); return }
-        getMe()
-            .then((res) => setUser(res.data))
-            .catch(() => { localStorage.removeItem("token"); navigate("/") })
         fetchAnnouncements()
-    }, [navigate])
+    }, [])
 
     const fetchAnnouncements = () => {
         API.get("/announcements").then(r => setAnnouncements(r.data)).catch(() => {})

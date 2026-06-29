@@ -17,11 +17,10 @@ const TYPE_COLORS = {
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-export default function Leave() {
+export default function Leave({ user }) {
     const [balance, setBalance] = useState(null)
     const [leaves, setLeaves] = useState([])
     const [adminLeaves, setAdminLeaves] = useState([])
-    const [user, setUser] = useState(null)
     const [tab, setTab] = useState('my')
     const [showForm, setShowForm] = useState(false)
     const [form, setForm] = useState({ leave_type: 'casual', from_date: '', to_date: '', reason: '' })
@@ -32,22 +31,20 @@ export default function Leave() {
     const navigate = useNavigate()
 
     const fetchAll = async () => {
-        const [meRes, balRes, leavesRes] = await Promise.all([
-            API.get('/auth/me'), API.get('/leave/balance'), API.get('/leave/my'),
+        const [balRes, leavesRes] = await Promise.all([
+            API.get('/leave/balance'), API.get('/leave/my'),
         ])
-        setUser(meRes.data)
         setBalance(balRes.data)
         setLeaves(leavesRes.data)
-        if (meRes.data.role === 'admin') {
+        if (user?.role === 'admin') {
             const adminRes = await API.get('/leave/admin')
             setAdminLeaves(adminRes.data)
         }
     }
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
         fetchAll()
-    }, [])
+    }, [user])
 
     const handleApply = async () => {
         if (!form.from_date || !form.to_date) { setFormError('Please select dates'); return }

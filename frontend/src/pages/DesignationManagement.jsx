@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import API from '../api'
 import Layout from '../components/Layout'
-import ProtectedRoute from '../components/ProtectedRoute'
 import { HiPlus, HiPencilSquare, HiTrash } from 'react-icons/hi2'
 
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: '13px', outline: 'none' }
 const labelStyle = { display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '500' }
 const card = { background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '28px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)', marginBottom: '20px' }
 
-function DesignationManagementInner({ user }) {
+export default function DesignationManagement({ user }) {
   const [designations, setDesignations] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editItem, setEditItem] = useState(null)
@@ -118,8 +117,4 @@ function DesignationManagementInner({ user }) {
       </div>
     </Layout>
   )
-}
-
-export default function DesignationManagement() {
-  return <ProtectedRoute adminOnly><DesignationManagementInner /></ProtectedRoute>
 }

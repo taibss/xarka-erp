@@ -22,16 +22,33 @@ def get_team_status(
     result = []
 
     for emp in employees:
-        current_task = None
-        fallback = db.query(Task).filter(
-            Task.assignee_id == emp.id,
-            Task.status == "inprogress"
+        attendance = db.query(Attendance).filter(
+            Attendance.employee_id == emp.id,
+            Attendance.date == today
         ).first()
-        if fallback:
+
+        if not attendance or not attendance.punch_in:
+            continue
+
+        if attendance.punch_out:
+            office_status = "Out"
+            hours_today = round(attendance.hours_worked or 0, 1)
+        else:
+            office_status = "In Office"
+            elapsed = datetime.utcnow() - attendance.punch_in
+            hours_today = round(elapsed.total_seconds() / 3600, 1)
+
+        current_task = None
+        active_task = db.query(Task).filter(
+            Task.assignee_id == emp.id,
+            Task.status.in_(["todo", "inprogress", "review"])
+        ).order_by(Task.updated_at.desc()).first()
+        if active_task:
             current_task = {
-                "id": fallback.id,
-                "title": fallback.title,
-                "priority": fallback.priority,
+                "id": active_task.id,
+                "title": active_task.title,
+                "priority": active_task.priority,
+                "status": active_task.status,
                 "started": None
             }
 
@@ -47,23 +64,6 @@ def get_team_status(
             Task.due_date < today
         ).all()
 
-        attendance = db.query(Attendance).filter(
-            Attendance.employee_id == emp.id,
-            Attendance.date == today
-        ).first()
-
-        if attendance:
-            if attendance.punch_out:
-                office_status = "Out"
-                hours_today = round(attendance.hours_worked or 0, 1)
-            else:
-                office_status = "In Office"
-                elapsed = datetime.utcnow() - attendance.punch_in
-                hours_today = round(elapsed.total_seconds() / 3600, 1)
-        else:
-            office_status = "Not in"
-            hours_today = 0
-
         result.append({
             "id": emp.id,
             "name": emp.name,
@@ -71,8 +71,8 @@ def get_team_status(
             "department": emp.department,
             "office_status": office_status,
             "hours_today": hours_today,
-            "punch_in": attendance.punch_in.isoformat() if attendance and attendance.punch_in else None,
-            "punch_out": attendance.punch_out.isoformat() if attendance and attendance.punch_out else None,
+            "punch_in": attendance.punch_in.isoformat() if attendance.punch_in else None,
+            "punch_out": attendance.punch_out.isoformat() if attendance.punch_out else None,
             "current_task": current_task,
             "completed_today": [{
                 "id": t.id,

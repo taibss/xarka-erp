@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMe } from '../api'
 import Layout from '../components/Layout'
 import { HiClipboardDocumentCheck, HiCheckCircle, HiCalendarDays } from 'react-icons/hi2'
 
@@ -10,20 +8,8 @@ const cards = [
   { name: 'Leave', icon: HiCalendarDays, route: '/leave', color: '#8b5cf6', desc: 'Apply for time off' },
 ]
 
-export default function Dashboard() {
-  const [user, setUser] = useState(null)
+export default function Dashboard({ user }) {
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) { navigate('/'); return }
-    getMe()
-      .then((res) => {
-        setUser(res.data)
-        if (res.data.role === 'admin') navigate('/admin')
-      })
-      .catch(() => { localStorage.removeItem('token'); navigate('/') })
-  }, [navigate])
 
   const handleLogout = () => {
     localStorage.removeItem('token')

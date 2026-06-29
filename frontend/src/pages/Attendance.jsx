@@ -13,7 +13,7 @@ const SOURCE_LABELS = {
     future_provider: { label: 'External', color: '#8b5cf6', bg: '#f5f3ff' },
 }
 
-export default function Attendance() {
+export default function Attendance({ user }) {
     const [today, setToday] = useState(null)
     const [history, setHistory] = useState([])
     const [adminData, setAdminData] = useState([])
@@ -23,7 +23,6 @@ export default function Attendance() {
     const [loading, setLoading] = useState(true)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
-    const [user, setUser] = useState(null)
     const [tab, setTab] = useState('me')
     const navigate = useNavigate()
 
@@ -34,8 +33,6 @@ export default function Attendance() {
     const fetchEmpHistory = (id) => API.get(`/attendance/admin/${id}`).then(r => { setEmpHistory(r.data.records); setSelectedEmp(r.data.employee) })
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
-        API.get('/auth/me').then(r => setUser(r.data))
         Promise.all([fetchToday(), fetchHistory()]).finally(() => setLoading(false))
     }, [])
 

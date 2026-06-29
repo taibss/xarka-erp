@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { getMe } from "../api"
 import API from "../api"
 import Layout from "../components/Layout"
 import { HiEnvelope, HiPhone, HiCalendar } from "react-icons/hi2"
 
-export default function Profile() {
-    const [user, setUser] = useState(null)
+export default function Profile({ user }) {
     const [profile, setProfile] = useState(null)
     const [editing, setEditing] = useState(false)
     const [form, setForm] = useState({})
@@ -15,16 +13,11 @@ export default function Profile() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
-        if (!token) { navigate("/"); return }
-        getMe()
-            .then((res) => setUser(res.data))
-            .catch(() => { localStorage.removeItem("token"); navigate("/") })
         API.get("/profile/me").then(r => {
             setProfile(r.data)
             setForm({ name: r.data.name, phone: r.data.phone || "" })
         })
-    }, [navigate])
+    }, [])
 
     const handleLogout = () => {
         localStorage.removeItem("token")

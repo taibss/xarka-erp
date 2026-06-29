@@ -4,8 +4,7 @@ import API from '../api'
 import Layout from '../components/Layout'
 import { HiCog6Tooth, HiCheckCircle, HiExclamationTriangle } from 'react-icons/hi2'
 
-export default function Settings() {
-    const [user, setUser] = useState(null)
+export default function Settings({ user }) {
     const [settings, setSettings] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -13,12 +12,7 @@ export default function Settings() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
-        API.get('/auth/me').then(r => {
-            setUser(r.data)
-            if (r.data.role !== 'admin') { navigate('/dashboard'); return }
-            API.get('/settings/attendance').then(r => setSettings(r.data)).finally(() => setLoading(false))
-        })
+        API.get('/settings/attendance').then(r => setSettings(r.data)).finally(() => setLoading(false))
     }, [])
 
     const handleLogout = () => { localStorage.removeItem('token'); navigate('/') }

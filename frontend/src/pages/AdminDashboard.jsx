@@ -79,18 +79,13 @@ const STATUS_LABEL = {
     done: 'Done',
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ user }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
-    const [user, setUser] = useState(null)
     const navigate = useNavigate()
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
-        Promise.all([
-            API.get('/auth/me').then(r => setUser(r.data)),
-            API.get('/admin/dashboard').then(r => setData(r.data)),
-        ]).finally(() => setLoading(false))
+        API.get('/admin/dashboard').then(r => setData(r.data)).finally(() => setLoading(false))
     }, [])
 
     const handleLogout = () => { localStorage.removeItem('token'); navigate('/') }

@@ -136,6 +136,14 @@ def get_meeting(
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
+    if current_employee.role != "admin" and meeting.created_by != current_employee.id:
+        is_attendee = db.query(MeetingAttendee).filter(
+            MeetingAttendee.meeting_id == meeting_id,
+            MeetingAttendee.employee_id == current_employee.id,
+        ).first()
+        if not is_attendee:
+            raise HTTPException(status_code=403, detail="Not authorized to view this meeting")
+
     return _serialize_meeting(meeting, db)
 
 

@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { getMe } from "../api"
 import API from "../api"
 import Layout from "../components/Layout"
 import { HiMagnifyingGlass, HiPhone } from "react-icons/hi2"
 
-export default function Directory() {
-    const [user, setUser] = useState(null)
+export default function Directory({ user }) {
     const [employees, setEmployees] = useState([])
     const [search, setSearch] = useState("")
     const [filter, setFilter] = useState("All")
@@ -14,15 +12,10 @@ export default function Directory() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
-        if (!token) { navigate("/"); return }
-        getMe()
-            .then((res) => setUser(res.data))
-            .catch(() => { localStorage.removeItem("token"); navigate("/") })
         API.get("/directory").then(r => setEmployees(r.data)).catch(e => {
             console.error("Failed to load directory:", e)
         })
-    }, [navigate])
+    }, [])
 
     const handleLogout = () => {
         localStorage.removeItem("token")

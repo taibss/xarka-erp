@@ -172,6 +172,8 @@ def get_task(
     current_employee: Employee = Depends(get_current_employee),
 ):
     task = _get_task_or_404(task_id, db)
+    if not _can_modify_task(task, current_employee):
+        raise HTTPException(status_code=403, detail="Not authorized to view this task")
     return _serialize_task(task, db)
 
 

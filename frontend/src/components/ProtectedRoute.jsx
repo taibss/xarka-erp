@@ -33,21 +33,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
       })
   }, [navigate, adminOnly])
 
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: 'var(--bg)',
-        color: 'var(--text-muted)',
-        fontSize: '14px',
-      }}>
-        Loading...
-      </div>
-    )
-  }
+  if (loading) return null
 
   return cloneElement(children, { user })
 }

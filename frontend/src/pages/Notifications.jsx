@@ -39,10 +39,9 @@ function timeAgo(dateStr) {
     return then.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
 }
 
-export default function Notifications() {
+export default function Notifications({ user }) {
     const [notifications, setNotifications] = useState([])
     const [loading, setLoading] = useState(true)
-    const [user, setUser] = useState(null)
     const navigate = useNavigate()
 
     const fetchNotifications = async () => {
@@ -51,11 +50,7 @@ export default function Notifications() {
     }
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
-        Promise.all([
-            fetchNotifications(),
-            API.get('/auth/me').then(r => setUser(r.data)),
-        ]).finally(() => setLoading(false))
+        fetchNotifications().finally(() => setLoading(false))
     }, [])
 
     const markRead = async (id) => {

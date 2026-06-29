@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import API from '../api'
 import Layout from '../components/Layout'
-import ProtectedRoute from '../components/ProtectedRoute'
 import { HiPlus, HiMagnifyingGlass, HiPencilSquare, HiTrash, HiArrowPath, HiKey } from 'react-icons/hi2'
 
 const inputStyle = {
@@ -13,7 +12,7 @@ const inputStyle = {
 const labelStyle = { display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '500' }
 const card = { background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '28px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)', marginBottom: '20px' }
 
-function EmployeeManagementInner({ user }) {
+export default function EmployeeManagement({ user }) {
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [designations, setDesignations] = useState([])
@@ -313,8 +312,4 @@ function EmployeeManagementInner({ user }) {
       </div>
     </Layout>
   )
-}
-
-export default function EmployeeManagement() {
-  return <ProtectedRoute adminOnly><EmployeeManagementInner /></ProtectedRoute>
 }

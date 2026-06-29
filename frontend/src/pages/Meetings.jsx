@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { getMe } from "../api"
 import API from "../api"
 import Layout from "../components/Layout"
 import { HiCalendar, HiClock, HiClipboardDocumentList, HiUser } from "react-icons/hi2"
 
-export default function Meetings() {
-    const [user, setUser] = useState(null)
+export default function Meetings({ user }) {
     const [meetings, setMeetings] = useState([])
     const [employees, setEmployees] = useState([])
     const [selected, setSelected] = useState(null)
@@ -17,14 +15,9 @@ export default function Meetings() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
-        if (!token) { navigate("/"); return }
-        getMe()
-            .then((res) => setUser(res.data))
-            .catch(() => { localStorage.removeItem("token"); navigate("/") })
         fetchMeetings()
         API.get("/employees").then(r => setEmployees(r.data)).catch(() => {})
-    }, [navigate])
+    }, [])
 
     const fetchMeetings = () => {
         API.get("/meetings").then(r => setMeetings(r.data)).catch(() => {})

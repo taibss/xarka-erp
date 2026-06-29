@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
-import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Kanban from './pages/Kanban'
@@ -20,20 +20,19 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/attendance" element={<Attendance />} />
-        <Route path="/kanban" element={<Kanban />} />
-        <Route path="/leave" element={<Leave />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/directory" element={<Directory />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/announcements" element={<Announcements />} />
-        <Route path="/meetings" element={<Meetings />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/employees" element={<EmployeeManagement />} />
-        <Route path="/designations" element={<DesignationManagement />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+        <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
+        <Route path="/leave" element={<ProtectedRoute><Leave /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/directory" element={<ProtectedRoute><Directory /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+        <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
+        <Route path="/employees" element={<ProtectedRoute adminOnly><EmployeeManagement /></ProtectedRoute>} />
+        <Route path="/designations" element={<ProtectedRoute adminOnly><DesignationManagement /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )

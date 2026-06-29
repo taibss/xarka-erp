@@ -81,10 +81,9 @@ function getStuckLevel(updatedAt) {
 const sectionCard = { background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow-sm)' }
 const statCard = { background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '12px' }
 
-export default function Kanban() {
+export default function Kanban({ user }) {
     const [tasks, setTasks] = useState([])
     const [employees, setEmployees] = useState([])
-    const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
     const [draggedId, setDraggedId] = useState(null)
     const [modal, setModal] = useState(null)
@@ -104,16 +103,12 @@ export default function Kanban() {
     const fetchActivity = () => API.get('/activity/recent').then(r => setActivityFeed(r.data)).catch(() => {})
 
     useEffect(() => {
-        if (!localStorage.getItem('token')) { navigate('/'); return }
-        API.get('/auth/me').then(r => {
-            setUser(r.data)
-            if (r.data.role === 'admin') {
-                fetchTeamStatus()
-                fetchActivity()
-            }
-        })
         Promise.all([fetchTasks(), fetchEmployees()]).finally(() => setLoading(false))
-    }, [])
+        if (user?.role === 'admin') {
+            fetchTeamStatus()
+            fetchActivity()
+        }
+    }, [user])
 
     useEffect(() => {
         if (detailTask) {
