@@ -4,7 +4,7 @@ from database import get_db
 from models.employee import Employee
 from models.task import Task
 from models.attendance import Attendance
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import require_admin
 from datetime import date, datetime
 
 router = APIRouter()
@@ -12,10 +12,8 @@ router = APIRouter()
 @router.get("/manager/team-status")
 def get_team_status(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee)
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
 
     employees = db.query(Employee).filter(Employee.is_active == True).all()
     today = date.today()

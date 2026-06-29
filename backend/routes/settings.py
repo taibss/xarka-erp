@@ -5,7 +5,7 @@ from typing import Optional
 from database import get_db
 from models.employee import Employee
 from models.integration_settings import IntegrationSettings
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import require_admin
 
 router = APIRouter()
 
@@ -17,10 +17,8 @@ class AttendanceSourceUpdate(BaseModel):
 @router.get("/settings/attendance")
 def get_attendance_settings(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     source = db.query(IntegrationSettings).filter(
         IntegrationSettings.key == "attendance_source"
@@ -46,10 +44,8 @@ def get_attendance_settings(
 def update_attendance_settings(
     data: AttendanceSourceUpdate,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     if data.source not in ("manual", "essl"):
         raise HTTPException(status_code=400, detail="Invalid source. Must be 'manual' or 'essl'.")

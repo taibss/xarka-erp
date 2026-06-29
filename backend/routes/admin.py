@@ -9,7 +9,7 @@ from models.leave import Leave
 from models.meeting import Meeting
 from models.meeting_attendee import MeetingAttendee
 from models.announcement import Announcement
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import require_admin
 from datetime import date, datetime, timedelta, timezone
 from collections import defaultdict
 
@@ -23,10 +23,8 @@ WEEKDAY_MAP = {0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri", 5: "Sat", 6: "S
 @router.get("/admin/dashboard")
 def admin_dashboard(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     today = date.today()
     thirty_days_ago = today - timedelta(days=30)

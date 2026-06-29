@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 from database import get_db
 from models.leave import Leave, LeaveBalance
 from models.employee import Employee
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import get_current_employee, require_admin
 from services.notify import create_notification, send_email
 
 router = APIRouter()
@@ -140,10 +140,8 @@ def get_my_balance(
 @router.get("/leave/admin")
 def get_all_leaves(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     leaves = db.query(Leave).order_by(Leave.created_at.desc()).all()
     return [_serialize_leave(l, db) for l in leaves]
 
@@ -154,10 +152,8 @@ def review_leave(
     leave_id: int,
     data: LeaveReview,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     if data.status not in {"approved", "rejected"}:
         raise HTTPException(status_code=400, detail="status must be approved or rejected")
 

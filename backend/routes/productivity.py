@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.task import Task
 from models.employee import Employee
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import get_current_employee, require_admin
 
 router = APIRouter()
 
@@ -61,9 +61,7 @@ def get_leaderboard(
 @router.get("/productivity/admin")
 def get_admin_overview(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     employees = db.query(Employee).filter(Employee.is_active == True).all()
     return [_serialize_employee_stats(e, db) for e in employees]

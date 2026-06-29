@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.attendance import Attendance
 from models.employee import Employee
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import get_current_employee, require_admin
 from datetime import datetime, date, timedelta, timezone
 
 router = APIRouter()
@@ -160,10 +160,8 @@ def get_history(
 @router.get("/attendance/admin")
 def admin_view(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     today = date.today()
     records = db.query(Attendance).filter(Attendance.date == today).all()
@@ -188,10 +186,8 @@ def admin_view(
 @router.get("/attendance/admin/employees")
 def admin_list_employees(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     employees = db.query(Employee).filter(Employee.is_active == True).all()
     return [{"id": e.id, "name": e.name, "email": e.email} for e in employees]
@@ -201,10 +197,8 @@ def admin_list_employees(
 def admin_employee_history(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     emp = db.query(Employee).filter(Employee.id == employee_id).first()
     if not emp:

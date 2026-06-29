@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.activity_log import ActivityLog
 from models.employee import Employee
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import require_admin
 
 router = APIRouter()
 
@@ -12,11 +12,8 @@ router = APIRouter()
 def get_recent_activity(
     limit: int = 20,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="Admin only")
 
     logs = db.query(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(limit).all()
 

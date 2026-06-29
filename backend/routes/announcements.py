@@ -5,7 +5,7 @@ from database import get_db
 from models.announcement import Announcement
 from models.announcement_read import AnnouncementRead
 from models.employee import Employee
-from utils.auth_utils import get_current_employee
+from utils.auth_utils import get_current_employee, require_admin
 from services.notify import send_email
 
 router = APIRouter()
@@ -20,10 +20,8 @@ class AnnouncementCreate(BaseModel):
 def create_announcement(
     data: AnnouncementCreate,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     announcement = Announcement(
         title=data.title,
@@ -114,10 +112,8 @@ def mark_read(
 def delete_announcement(
     announcement_id: int,
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_employee),
+    current_employee: Employee = Depends(require_admin),
 ):
-    if current_employee.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
     announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
     if not announcement:
