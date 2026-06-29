@@ -5,7 +5,6 @@ from database import engine
 from models.employee import Employee, Base
 from models.attendance import Attendance
 from models.task import Task, Comment, Subtask
-from models.task_timer import TaskTimer
 from models.leave import Leave, LeaveBalance
 from models.notification import Notification
 from models.announcement import Announcement
@@ -24,6 +23,9 @@ from routes.directory import router as directory_router
 from routes.profile import router as profile_router
 from routes.announcements import router as announcements_router
 from routes.meetings import router as meetings_router
+from routes.manager import router as manager_router
+from routes.activity import router as activity_router
+from models.activity_log import ActivityLog
 import os
 
 
@@ -64,6 +66,8 @@ app.include_router(directory_router)
 app.include_router(profile_router)
 app.include_router(announcements_router)
 app.include_router(meetings_router)
+app.include_router(manager_router)
+app.include_router(activity_router)
 
 @app.get("/")
 def root():

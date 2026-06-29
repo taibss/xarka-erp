@@ -6,6 +6,7 @@ from datetime import date
 from database import get_db
 from models.task import Task, Comment, Subtask
 from models.employee import Employee
+from models.activity_log import ActivityLog
 from utils.auth_utils import get_current_employee
 from services.notify import create_notification, send_email
 
@@ -104,7 +105,24 @@ def create_task(
     db.commit()
     db.refresh(task)
 
+    log = ActivityLog(
+        employee_id=current_employee.id,
+        action="created",
+        task_id=task.id,
+        detail=f"created task '{task.title}'",
+    )
+    db.add(log)
+
     if task.assignee_id and task.assignee_id != current_employee.id:
+        assignee = db.query(Employee).filter(Employee.id == task.assignee_id).first()
+        log2 = ActivityLog(
+            employee_id=current_employee.id,
+            action="assigned",
+            task_id=task.id,
+            detail=f"assigned to {assignee.name}" if assignee else "assigned",
+        )
+        db.add(log2)
+        db.commit()
         create_notification(
             db=db,
             employee_id=task.assignee_id,
@@ -114,7 +132,6 @@ def create_task(
             link="/kanban",
         )
 
-        assignee = db.query(Employee).filter(Employee.id == task.assignee_id).first()
         if assignee:
             send_email(
                 to=assignee.email,
@@ -180,9 +197,21 @@ def move_task(
     if data.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status")
     task = _get_task_or_404(task_id, db)
+    old_status = task.status
     task.status = data.status
     db.commit()
     db.refresh(task)
+
+    status_labels = {"todo": "To Do", "inprogress": "In Progress", "review": "Review", "done": "Done"}
+    log = ActivityLog(
+        employee_id=current_employee.id,
+        action="completed" if data.status == "done" else "moved",
+        task_id=task.id,
+        detail=f"moved to {status_labels.get(data.status, data.status)}" if data.status != "done" else f"completed '{task.title}'",
+    )
+    db.add(log)
+    db.commit()
+
     return _serialize_task(task, db)
 
 
@@ -217,6 +246,15 @@ def add_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    log = ActivityLog(
+        employee_id=current_employee.id,
+        action="commented",
+        task_id=task_id,
+        detail=f"commented on task",
+    )
+    db.add(log)
+    db.commit()
 
     task = db.query(Task).filter(Task.id == task_id).first()
     if task and task.assignee_id and task.assignee_id != current_employee.id:

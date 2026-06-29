@@ -6,7 +6,6 @@ from models.employee import Employee
 from models.attendance import Attendance
 from models.task import Task
 from models.leave import Leave
-from models.task_timer import TaskTimer
 from models.meeting import Meeting
 from models.meeting_attendee import MeetingAttendee
 from models.announcement import Announcement
@@ -101,14 +100,11 @@ def admin_dashboard(
     productivity = []
     for emp in active_employees:
         completed = db.query(Task).filter(Task.assignee_id == emp.id, Task.status == "done").count()
-        timer_rows = db.query(TaskTimer).filter(TaskTimer.employee_id == emp.id, TaskTimer.duration_hours.isnot(None)).all()
-        total_hours = round(sum(t.duration_hours for t in timer_rows), 1) if timer_rows else 0
         productivity.append({
             "employee_id": emp.id,
             "name": emp.name,
             "department": emp.department or "General",
             "tasks_completed": completed,
-            "hours_logged": total_hours,
         })
     productivity.sort(key=lambda x: x["tasks_completed"], reverse=True)
 
