@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, cloneElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMe } from '../api'
 
@@ -49,5 +49,5 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     )
   }
 
-  return children({ user })
+  return cloneElement(children, { user })
 }

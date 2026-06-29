@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiChartBar, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle, HiCog6Tooth, HiBuildingOffice2, HiBriefcase } from 'react-icons/hi2'
+import { HiHome, HiClipboardDocumentCheck, HiCheckCircle, HiCalendarDays, HiMegaphone, HiCalendar, HiUserGroup, HiUser, HiBell, HiArrowRightOnRectangle, HiCog6Tooth, HiBuildingOffice2, HiBriefcase } from 'react-icons/hi2'
 import { HiChartPie } from 'react-icons/hi'
 
 import API from '../api'
@@ -8,7 +8,6 @@ import API from '../api'
 const navItems = [
   { icon: HiClipboardDocumentCheck, label: 'Attendance', route: '/attendance' },
   { icon: HiCheckCircle, label: 'Tasks', route: '/kanban' },
-  { icon: HiChartBar, label: 'Productivity', route: '/productivity' },
   { icon: HiCalendarDays, label: 'Leave', route: '/leave' },
   { icon: HiMegaphone, label: 'Announcements', route: '/announcements' },
   { icon: HiCalendar, label: 'Meetings', route: '/meetings' },

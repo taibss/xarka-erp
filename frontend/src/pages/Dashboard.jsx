@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMe } from '../api'
 import Layout from '../components/Layout'
-import { HiClipboardDocumentCheck, HiCheckCircle, HiChartBar, HiCalendarDays } from 'react-icons/hi2'
+import { HiClipboardDocumentCheck, HiCheckCircle, HiCalendarDays } from 'react-icons/hi2'
 
 const cards = [
   { name: 'Attendance', icon: HiClipboardDocumentCheck, route: '/attendance', color: '#22c55e', desc: 'Track your daily hours' },
   { name: 'Tasks', icon: HiCheckCircle, route: '/kanban', color: '#3b82f6', desc: 'Manage your workflow' },
-  { name: 'Productivity', icon: HiChartBar, route: '/productivity', color: '#f59e0b', desc: 'View your performance' },
   { name: 'Leave', icon: HiCalendarDays, route: '/leave', color: '#8b5cf6', desc: 'Apply for time off' },
 ]
 

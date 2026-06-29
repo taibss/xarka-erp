@@ -4,7 +4,6 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Kanban from './pages/Kanban'
-import Productivity from './pages/Productivity'
 import Leave from './pages/Leave'
 import Notifications from './pages/Notifications'
 import AdminDashboard from './pages/AdminDashboard'
@@ -26,7 +25,6 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/kanban" element={<Kanban />} />
-        <Route path="/productivity" element={<Productivity />} />
         <Route path="/leave" element={<Leave />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/admin" element={<AdminDashboard />} />
