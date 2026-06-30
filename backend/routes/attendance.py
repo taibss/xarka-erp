@@ -252,6 +252,173 @@ class SyncBiometricResponse(BaseModel):
     details: List[dict]
 
 
+@router.post("/attendance/sync")
+def sync_attendance(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(require_admin),
+):
+    """
+    Sync attendance records from external biometric system (eSSL).
+
+    Accepts pre-parsed attendance records and creates/updates ERP attendance.
+    The Windows sync agent reads the MDB and posts records to this endpoint.
+
+    Authentication: Admin JWT required.
+
+    Request body:
+        {
+            "records": [
+                {
+                    "external_employee_id": 2533,
+                    "attendance_date": "2026-06-30",
+                    "in_time": "10:41:51",
+                    "out_time": "18:05:46",
+                    "status": "Present"
+                }
+            ]
+        }
+
+    Processing:
+        1. Resolve employee via employee_biometric_mapping
+        2. Create new attendance or update existing (unique: employee_id + date)
+        3. Store source='essl'
+
+    Response:
+        {
+            "success": true,
+            "processed": 15,
+            "created": 10,
+            "updated": 3,
+            "unmapped": 1,
+            "errors": 1
+        }
+    """
+    from models.biometric_mapping import EmployeeBiometricMapping
+
+    records = body.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="No records provided")
+
+    # Build mapping lookup: external_employee_id -> employee_id
+    mappings = (
+        db.query(EmployeeBiometricMapping)
+        .filter(
+            EmployeeBiometricMapping.provider == "essl",
+            EmployeeBiometricMapping.is_active == True,
+        )
+        .all()
+    )
+    mapping_lookup = {str(m.external_employee_id): m.employee_id for m in mappings}
+
+    created = 0
+    updated = 0
+    unmapped = 0
+    errors = 0
+
+    for rec in records:
+        try:
+            ext_id = str(rec.get("external_employee_id", ""))
+            att_date_str = rec.get("attendance_date")
+            in_time_str = rec.get("in_time")
+            out_time_str = rec.get("out_time")
+            status = rec.get("status", "Present")
+
+            # Resolve employee
+            employee_id = mapping_lookup.get(ext_id)
+            if not employee_id:
+                unmapped += 1
+                continue
+
+            # Parse date
+            try:
+                att_date = datetime.strptime(att_date_str, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                errors += 1
+                continue
+
+            # Parse times
+            punch_in = None
+            punch_out = None
+            if in_time_str:
+                try:
+                    t = datetime.strptime(in_time_str, "%H:%M:%S").time()
+                    punch_in = datetime.combine(att_date, t)
+                except ValueError:
+                    try:
+                        t = datetime.strptime(in_time_str, "%H:%M").time()
+                        punch_in = datetime.combine(att_date, t)
+                    except ValueError:
+                        pass
+
+            if out_time_str:
+                try:
+                    t = datetime.strptime(out_time_str, "%H:%M:%S").time()
+                    punch_out = datetime.combine(att_date, t)
+                except ValueError:
+                    try:
+                        t = datetime.strptime(out_time_str, "%H:%M").time()
+                        punch_out = datetime.combine(att_date, t)
+                    except ValueError:
+                        pass
+
+            # Calculate hours worked
+            hours_worked = None
+            if punch_in and punch_out:
+                hours_worked = round((punch_out - punch_in).total_seconds() / 3600, 2)
+
+            # Check for existing record (unique: employee_id + date)
+            existing = (
+                db.query(Attendance)
+                .filter(
+                    Attendance.employee_id == employee_id,
+                    Attendance.date == att_date,
+                )
+                .first()
+            )
+
+            if existing:
+                # Update existing record
+                existing.punch_in = punch_in or existing.punch_in
+                existing.punch_out = punch_out or existing.punch_out
+                existing.hours_worked = hours_worked or existing.hours_worked
+                existing.status = status.lower() if status else existing.status
+                existing.source = "essl"
+                existing.source_employee_id = ext_id
+                existing.synced_at = datetime.utcnow()
+                updated += 1
+            else:
+                # Create new record
+                attendance = Attendance(
+                    employee_id=employee_id,
+                    date=att_date,
+                    status=status.lower() if status else "present",
+                    punch_in=punch_in,
+                    punch_out=punch_out,
+                    hours_worked=hours_worked,
+                    source="essl",
+                    source_employee_id=ext_id,
+                    synced_at=datetime.utcnow(),
+                )
+                db.add(attendance)
+                created += 1
+
+        except Exception as e:
+            errors += 1
+            logger.error("Error processing record: %s", e)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "processed": len(records),
+        "created": created,
+        "updated": updated,
+        "unmapped": unmapped,
+        "errors": errors,
+    }
+
+
 @router.post("/attendance/sync-biometric")
 def sync_biometric(
     body: SyncBiometricRequest = None,
