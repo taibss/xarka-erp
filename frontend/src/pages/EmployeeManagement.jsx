@@ -67,18 +67,17 @@ export default function EmployeeManagement({ user }) {
   const handleSave = async () => {
     setSaving(true); setMessage(null)
     try {
+      const cleanInt = (v) => (v === '' || v === null || v === undefined) ? null : parseInt(v)
+      const payload = {
+        ...form,
+        department_id: cleanInt(form.department_id),
+        designation_id: cleanInt(form.designation_id),
+        manager_id: cleanInt(form.manager_id),
+      }
       if (editEmployee) {
-        const payload = { ...form }
-        if (payload.department_id) payload.department_id = parseInt(payload.department_id)
-        if (payload.designation_id) payload.designation_id = parseInt(payload.designation_id)
-        if (payload.manager_id) payload.manager_id = parseInt(payload.manager_id)
         await API.put(`/employees/${editEmployee.id}`, payload)
         setMessage({ type: 'success', text: 'Employee updated' })
       } else {
-        const payload = { ...form }
-        if (payload.department_id) payload.department_id = parseInt(payload.department_id)
-        if (payload.designation_id) payload.designation_id = parseInt(payload.designation_id)
-        if (payload.manager_id) payload.manager_id = parseInt(payload.manager_id)
         const res = await API.post('/employees', payload)
         setMessage({ type: 'success', text: `Employee created. Temporary password: ${res.data.temporary_password}` })
       }
