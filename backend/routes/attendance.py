@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
 from models.attendance import Attendance
 from models.employee import Employee
 from utils.auth_utils import get_current_employee, require_admin
 from datetime import datetime, date, timedelta, timezone
+from typing import Optional, List
+from pydantic import BaseModel
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 WORK_START_HOUR = 10
 LATE_THRESHOLD_HOUR = 11
@@ -226,3 +231,172 @@ def admin_employee_history(
             for r in records
         ],
     }
+
+
+# ── Biometric Sync Endpoint ──────────────────────────────────────────────
+
+
+class SyncBiometricRequest(BaseModel):
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    test_mode: bool = False
+    test_records: Optional[List[dict]] = None
+
+
+class SyncBiometricResponse(BaseModel):
+    success: bool
+    imported: int
+    duplicates: int
+    unmapped: int
+    errors: int
+    details: List[dict]
+
+
+@router.post("/attendance/sync-biometric")
+def sync_biometric(
+    body: SyncBiometricRequest = None,
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(require_admin),
+):
+    """
+    Manual biometric sync endpoint.
+
+    Triggers a sync from eTimeTrackLite MDB → Xarka attendance table.
+
+    Flow:
+        1. Connect to MDB (or use test records)
+        2. Read AttendanceLogs
+        3. Resolve EmployeeId via employee_biometric_mapping
+        4. Import using import_attendance() (with duplicate detection)
+
+    Admin only. No automatic scheduling. No background jobs.
+    """
+    from services.essl_sync import ESSLSync
+
+    logger.info(
+        "Biometric sync triggered by admin %s (id=%d)",
+        current_employee.email, current_employee.id,
+    )
+
+    # Parse date range
+    start_date = None
+    end_date = None
+    if body and body.start_date:
+        try:
+            start_date = datetime.strptime(body.start_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD.")
+    if body and body.end_date:
+        try:
+            end_date = datetime.strptime(body.end_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD.")
+
+    # Get MDB path from environment
+    mdb_path = os.getenv("ESSL_MDB_PATH")
+
+    test_mode = body.test_mode if body else False
+    test_records = body.test_records if body else None
+
+    # Initialize sync service
+    sync = ESSLSync(mdb_path=mdb_path)
+
+    resolved_records = []
+
+    if test_mode:
+        # Test mode: use injected records
+        logger.info("Test mode: using %d injected records", len(test_records or []))
+        if not test_records:
+            raise HTTPException(
+                status_code=400,
+                detail="test_mode=true requires test_records array in request body.",
+            )
+
+        # Resolve mappings for test records
+        mapping_lookup = sync._build_mapping_lookup(db)
+        for log in test_records:
+            ext_id = str(log.get("employee_id", ""))
+            mapping = mapping_lookup.get(ext_id)
+            resolved_records.append({
+                "attendance_date": str(log.get("attendance_date", "")),
+                "external_employee_id": ext_id,
+                "in_time": log.get("in_time"),
+                "out_time": log.get("out_time"),
+                "duration": log.get("duration"),
+                "late_by": log.get("late_by", 0),
+                "early_by": log.get("early_by", 0),
+                "status": log.get("status", "Present"),
+                "present": bool(log.get("present", 1)),
+                "absent": bool(log.get("absent", 0)),
+                "mapped": mapping is not None,
+                "employee_id": mapping["employee_id"] if mapping else None,
+                "employee_name": mapping["employee_name"] if mapping else None,
+            })
+    else:
+        # Production mode: read from MDB
+        if not mdb_path:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "ESSL_MDB_PATH environment variable not set. "
+                    "Configure the path to the eTimeTrackLite .mdb file. "
+                    "Or use test_mode=true with test_records."
+                ),
+            )
+
+        try:
+            connected = sync.connect()
+            if not connected:
+                raise HTTPException(
+                    status_code=500,
+                    detail="MDB connection returned False. Check MDB path and ODBC driver.",
+                )
+        except NotImplementedError as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Cannot connect to MDB: {e}",
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"MDB connection failed: {e}",
+            )
+
+        try:
+            resolved_records = sync.read_attendance_logs(db, start_date, end_date)
+        finally:
+            sync.disconnect()
+
+    # Import attendance
+    summary = sync.import_attendance(db, resolved_records)
+
+    # Log results
+    logger.info(
+        "Sync complete: imported=%d, duplicates=%d, unmapped=%d, errors=%d",
+        summary["imported"],
+        summary["skipped_duplicate"],
+        summary["skipped_unmapped"],
+        len(summary["errors"]),
+    )
+
+    for record in summary["records"]:
+        logger.info(
+            "Imported: employee_id=%s date=%s ext_id=%s",
+            record["employee_id"],
+            record["date"],
+            record["source_employee_id"],
+        )
+
+    for error in summary["errors"]:
+        logger.error("Sync error: %s", error)
+
+    return SyncBiometricResponse(
+        success=True,
+        imported=summary["imported"],
+        duplicates=summary["skipped_duplicate"],
+        unmapped=summary["skipped_unmapped"],
+        errors=len(summary["errors"]),
+        details=summary["records"],
+    )
