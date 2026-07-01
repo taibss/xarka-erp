@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
@@ -316,6 +317,18 @@ def sync_attendance(
     unmapped = 0
     unmapped_records = []
     errors = 0
+
+    for i, rec in enumerate(records[:3]):
+        logger.info(
+            "SYNC PAYLOAD DEBUG:\n%s",
+            json.dumps({
+                "external_employee_id": rec.get("external_employee_id"),
+                "attendance_date": rec.get("attendance_date"),
+                "in_time": rec.get("in_time"),
+                "out_time": rec.get("out_time"),
+                "status": rec.get("status"),
+            }, indent=2, default=str),
+        )
 
     for rec in records:
         try:

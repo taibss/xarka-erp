@@ -354,6 +354,7 @@ class ESSLSync:
             }
         """
         imported = 0
+        updated_count = 0
         skipped_duplicate = 0
         skipped_unmapped = 0
         errors = []
@@ -411,11 +412,34 @@ class ESSLSync:
             )
 
             if existing:
-                skipped_duplicate += 1
-                logger.debug(
-                    "DB duplicate skipped: employee_id=%s date=%s ext_id=%s",
-                    employee_id, att_date, ext_id,
-                )
+                # Update existing record with punch times if they were missing
+                try:
+                    punch_in = self._combine_date_time(att_date, record.get("in_time"))
+                    punch_out = self._combine_date_time(att_date, record.get("out_time"))
+
+                    updated = False
+                    if punch_in is not None and existing.punch_in is None:
+                        existing.punch_in = punch_in
+                        updated = True
+                    if punch_out is not None and existing.punch_out is None:
+                        existing.punch_out = punch_out
+                        updated = True
+                    if existing.hours_worked is None and record.get("duration"):
+                        existing.hours_worked = record.get("duration")
+                        updated = True
+
+                    if updated:
+                        db.add(existing)
+                        updated_count += 1
+                        logger.info(
+                            "Updated existing record: employee_id=%s date=%s punch_in=%s punch_out=%s",
+                            employee_id, att_date, punch_in, punch_out,
+                        )
+                    else:
+                        skipped_duplicate += 1
+                except Exception as e:
+                    logger.error("Error updating existing record: %s", e)
+                    skipped_duplicate += 1
                 continue
 
             # Transform and create attendance record
@@ -441,13 +465,14 @@ class ESSLSync:
                 errors.append(error_msg)
                 logger.error(error_msg)
 
-        # Commit all new records
-        if imported > 0:
+        # Commit all new records and updates
+        if imported > 0 or updated_count > 0:
             db.commit()
-            logger.info("Committed %d attendance records", imported)
+            logger.info("Committed %d new records, %d updates", imported, updated_count)
 
         summary = {
             "imported": imported,
+            "updated": updated_count,
             "skipped_duplicate": skipped_duplicate,
             "skipped_unmapped": skipped_unmapped,
             "errors": errors,
@@ -455,8 +480,8 @@ class ESSLSync:
         }
 
         logger.info(
-            "Import complete: imported=%d, duplicates=%d, unmapped=%d, errors=%d",
-            imported, skipped_duplicate, skipped_unmapped, len(errors),
+            "Import complete: imported=%d, updated=%d, duplicates=%d, unmapped=%d, errors=%d",
+            imported, updated_count, skipped_duplicate, skipped_unmapped, len(errors),
         )
 
         return summary
@@ -514,25 +539,40 @@ class ESSLSync:
         """Combine a date with a time string to create a full datetime."""
         if not time_str:
             return None
-        try:
-            time_str = str(time_str).strip()
-            # Try time-only formats first
-            for fmt in ("%H:%M:%S", "%H:%M"):
-                try:
-                    t = datetime.strptime(time_str, fmt).time()
-                    return datetime.combine(att_date, t)
-                except ValueError:
-                    continue
-            # pyodbc may return full datetime strings from Access MDB (e.g. "2026-06-30 10:41:51")
-            # Extract the time portion and combine with the provided date
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
-                try:
-                    dt = datetime.strptime(time_str, fmt)
-                    return datetime.combine(att_date, dt.time())
-                except ValueError:
-                    continue
-        except Exception:
-            pass
+
+        time_str = str(time_str).strip()
+
+        if not time_str:
+            return None
+
+        # Try full datetime strings first (sent by sync_agent)
+        for fmt in (
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S.%f",
+        ):
+            try:
+                dt = datetime.strptime(time_str, fmt)
+                # Use the date from att_date but time from the parsed datetime
+                # This handles cases where the date in the string might differ
+                return datetime.combine(att_date, dt.time())
+            except ValueError:
+                continue
+
+        # Try time-only strings (legacy format)
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                t = datetime.strptime(time_str, fmt).time()
+                return datetime.combine(att_date, t)
+            except ValueError:
+                continue
+
+        # Log the failure so we can debug future format issues
+        logger.warning(
+            "_combine_date_time: could not parse time_str=%r for date=%s",
+            time_str, att_date,
+        )
         return None
 
     def _derive_status(self, record: Dict) -> str:
