@@ -9,14 +9,14 @@ export default function Meetings({ user }) {
     const [employees, setEmployees] = useState([])
     const [selected, setSelected] = useState(null)
     const [showForm, setShowForm] = useState(false)
-    const [form, setForm] = useState({ title: "", agenda: "", meeting_time: "", duration_minutes: 60, attendee_ids: [] })
+    const [form, setForm] = useState({ title: "", agenda: "", meeting_time: "", duration_minutes: 10, attendee_ids: [] })
     const [notesForm, setNotesForm] = useState({ notes: "", action_items: "" })
     const [showNotes, setShowNotes] = useState(false)
     const navigate = useNavigate()
 
     useEffect(() => {
         fetchMeetings()
-        API.get("/employees").then(r => setEmployees(r.data)).catch(() => {})
+        API.get("/employees/active").then(r => setEmployees(r.data)).catch(() => {})
     }, [])
 
     const fetchMeetings = () => {
@@ -34,7 +34,7 @@ export default function Meetings({ user }) {
             ...form,
             meeting_time: new Date(form.meeting_time).toISOString(),
         })
-        setForm({ title: "", agenda: "", meeting_time: "", duration_minutes: 60, attendee_ids: [] })
+        setForm({ title: "", agenda: "", meeting_time: "", duration_minutes: 10, attendee_ids: [] })
         setShowForm(false)
         fetchMeetings()
     }
@@ -108,7 +108,7 @@ export default function Meetings({ user }) {
                                     style={{ padding: "10px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text)", fontSize: "14px", outline: "none" }} />
                                 <input type="datetime-local" value={form.meeting_time} onChange={e => setForm({ ...form, meeting_time: e.target.value })}
                                     style={{ padding: "10px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text)", fontSize: "14px", outline: "none" }} />
-                                <input type="number" placeholder="Duration (minutes)" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: parseInt(e.target.value) || 60 })}
+                                <input type="number" placeholder="Duration (minutes)" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: parseInt(e.target.value) || 10 })}
                                     style={{ padding: "10px 14px", borderRadius: "var(--radius-xs)", border: "1px solid var(--border)", background: "var(--bg-input)", color: "var(--text)", fontSize: "14px", outline: "none" }} />
                                 <div>
                                     <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "8px" }}>Attendees</p>

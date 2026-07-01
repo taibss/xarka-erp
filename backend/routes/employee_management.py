@@ -6,7 +6,7 @@ from datetime import date
 from database import get_db
 from models.employee import Employee
 from models.biometric_mapping import EmployeeBiometricMapping
-from utils.auth_utils import require_admin, hash_password
+from utils.auth_utils import require_admin, get_current_employee, hash_password
 from services.notify import send_email
 import secrets
 import string
@@ -84,7 +84,7 @@ def list_employees(
 @router.get("/employees/active")
 def list_active_employees(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(require_admin),
+    current_employee: Employee = Depends(get_current_employee),
 ):
     employees = db.query(Employee).filter(Employee.is_active == True).order_by(Employee.name).all()
     return [{"id": e.id, "name": e.name, "department": e.department} for e in employees]
