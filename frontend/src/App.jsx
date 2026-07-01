@@ -11,7 +11,6 @@ import Directory from './pages/Directory'
 import Profile from './pages/Profile'
 import Announcements from './pages/Announcements'
 import Meetings from './pages/Meetings'
-import Settings from './pages/Settings'
 import EmployeeManagement from './pages/EmployeeManagement'
 import DesignationManagement from './pages/DesignationManagement'
 import Reports from './pages/Reports'
@@ -31,7 +30,6 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
         <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
         <Route path="/employees" element={<ProtectedRoute adminOnly><EmployeeManagement /></ProtectedRoute>} />
         <Route path="/designations" element={<ProtectedRoute adminOnly><DesignationManagement /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />

@@ -30,7 +30,6 @@ from routes.activity import router as activity_router
 from models.activity_log import ActivityLog
 from models.biometric_mapping import EmployeeBiometricMapping
 from models.integration_settings import IntegrationSettings
-from routes.settings import router as settings_router
 from routes.departments import router as departments_router
 from routes.designations import router as designations_router
 from routes.employee_management import router as employee_management_router
@@ -77,7 +76,6 @@ app.include_router(announcements_router)
 app.include_router(meetings_router)
 app.include_router(manager_router)
 app.include_router(activity_router)
-app.include_router(settings_router)
 app.include_router(departments_router)
 app.include_router(designations_router)
 app.include_router(employee_management_router)

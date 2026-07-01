@@ -82,7 +82,7 @@ export default function Attendance({ user }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Date', 'Punch In', 'Punch Out', 'Hours', 'Status', 'Source', 'Synced'].map(h => (
+                    {['Date', 'Punch In', 'Punch Out', 'Hours', 'Source', 'Synced'].map(h => (
                         <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                     ))}
                 </tr>
@@ -94,15 +94,6 @@ export default function Attendance({ user }) {
                         <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_in)}</td>
                         <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_out)}</td>
                         <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{row.hours_worked != null ? `${row.hours_worked.toFixed(2)}h` : '--'}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                            <span style={{
-                                background: row.is_late ? 'var(--error-bg)' : 'var(--success-bg)',
-                                color: row.is_late ? 'var(--error)' : 'var(--success)',
-                                padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500',
-                            }}>
-                                {row.is_late ? 'Late' : 'On Time'}
-                            </span>
-                        </td>
                         <td style={{ padding: '12px 14px' }}><SourceBadge src={row.source} /></td>
                         <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '12px' }}>
                             {row.synced_at ? fmt(row.synced_at) : '--'}
@@ -198,10 +189,6 @@ export default function Attendance({ user }) {
                                             Managed by biometric device
                                         </span>
                                     )}
-
-                                    {today?.is_late && (
-                                        <span style={{ background: 'var(--error-bg)', color: 'var(--error)', fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: '500' }}>LATE</span>
-                                    )}
                                 </div>
                             )}
 
@@ -265,7 +252,7 @@ export default function Attendance({ user }) {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                                         <thead>
                                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                                {['Employee', 'Punch In', 'Punch Out', 'Hours', 'Status', 'Source', 'In Office'].map(h => (
+                                                {['Employee', 'Punch In', 'Punch Out', 'Hours', 'Source', 'In Office'].map(h => (
                                                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -277,15 +264,6 @@ export default function Attendance({ user }) {
                                                     <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_in)}</td>
                                                     <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_out)}</td>
                                                     <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{row.hours_worked != null ? `${row.hours_worked.toFixed(2)}h` : '--'}</td>
-                                                    <td style={{ padding: '12px 14px' }}>
-                                                        <span style={{
-                                                            background: row.is_late ? 'var(--error-bg)' : 'var(--success-bg)',
-                                                            color: row.is_late ? 'var(--error)' : 'var(--success)',
-                                                            padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500',
-                                                        }}>
-                                                            {row.is_late ? 'Late' : 'On Time'}
-                                                        </span>
-                                                    </td>
                                                     <td style={{ padding: '12px 14px' }}><SourceBadge src={row.source} /></td>
                                                     <td style={{ padding: '12px 14px' }}>
                                                         <span style={{
