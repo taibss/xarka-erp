@@ -515,12 +515,20 @@ class ESSLSync:
         if not time_str:
             return None
         try:
-            # Parse time (HH:MM:SS or HH:MM)
             time_str = str(time_str).strip()
+            # Try time-only formats first
             for fmt in ("%H:%M:%S", "%H:%M"):
                 try:
                     t = datetime.strptime(time_str, fmt).time()
                     return datetime.combine(att_date, t)
+                except ValueError:
+                    continue
+            # pyodbc may return full datetime strings from Access MDB (e.g. "2026-06-30 10:41:51")
+            # Extract the time portion and combine with the provided date
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+                try:
+                    dt = datetime.strptime(time_str, fmt)
+                    return datetime.combine(att_date, dt.time())
                 except ValueError:
                     continue
         except Exception:

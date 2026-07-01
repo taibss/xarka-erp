@@ -342,30 +342,36 @@ def sync_attendance(
                 errors += 1
                 continue
 
-            # Parse times
+            # Parse times — handle both time-only ("10:41:51") and
+            # full datetime strings ("2026-06-30 10:41:51") that pyodbc
+            # may return from Access MDB DateTime fields.
             punch_in = None
             punch_out = None
-            if in_time_str:
-                try:
-                    t = datetime.strptime(in_time_str, "%H:%M:%S").time()
-                    punch_in = datetime.combine(att_date, t)
-                except ValueError:
+            _TIME_FORMATS = ("%H:%M:%S", "%H:%M")
+            _DATETIME_FORMATS = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f")
+
+            def _parse_time_string(ts):
+                for fmt in _TIME_FORMATS:
                     try:
-                        t = datetime.strptime(in_time_str, "%H:%M").time()
-                        punch_in = datetime.combine(att_date, t)
+                        return datetime.strptime(ts, fmt).time()
                     except ValueError:
-                        pass
+                        continue
+                for fmt in _DATETIME_FORMATS:
+                    try:
+                        return datetime.strptime(ts, fmt).time()
+                    except ValueError:
+                        continue
+                return None
+
+            if in_time_str:
+                t = _parse_time_string(in_time_str)
+                if t:
+                    punch_in = datetime.combine(att_date, t)
 
             if out_time_str:
-                try:
-                    t = datetime.strptime(out_time_str, "%H:%M:%S").time()
+                t = _parse_time_string(out_time_str)
+                if t:
                     punch_out = datetime.combine(att_date, t)
-                except ValueError:
-                    try:
-                        t = datetime.strptime(out_time_str, "%H:%M").time()
-                        punch_out = datetime.combine(att_date, t)
-                    except ValueError:
-                        pass
 
             # Calculate hours worked
             hours_worked = None
