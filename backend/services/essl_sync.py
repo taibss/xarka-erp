@@ -412,34 +412,48 @@ class ESSLSync:
             )
 
             if existing:
-                # Update existing record with punch times if they were missing
                 try:
-                    punch_in = self._combine_date_time(att_date, record.get("in_time"))
-                    punch_out = self._combine_date_time(att_date, record.get("out_time"))
+                    punch_in = self._combine_date_time(
+                        att_date, record.get("in_time")
+                    )
+                    punch_out = self._combine_date_time(
+                        att_date, record.get("out_time")
+                    )
 
-                    updated = False
-                    if punch_in is not None and existing.punch_in is None:
-                        existing.punch_in = punch_in
-                        updated = True
-                    if punch_out is not None and existing.punch_out is None:
-                        existing.punch_out = punch_out
-                        updated = True
-                    if existing.hours_worked is None and record.get("duration"):
+                    logger.info(
+                        "RAW TIMES: employee_id=%s date=%s in_time=%r out_time=%r",
+                        employee_id, att_date,
+                        record.get("in_time"),
+                        record.get("out_time")
+                    )
+
+                    # Always overwrite with machine data
+                    existing.punch_in = punch_in
+                    existing.punch_out = punch_out
+
+                    # Update hours_worked from machine duration
+                    if record.get("duration"):
                         existing.hours_worked = record.get("duration")
-                        updated = True
-
-                    if updated:
-                        db.add(existing)
-                        updated_count += 1
-                        logger.info(
-                            "Updated existing record: employee_id=%s date=%s punch_in=%s punch_out=%s",
-                            employee_id, att_date, punch_in, punch_out,
+                    elif punch_in and punch_out:
+                        existing.hours_worked = round(
+                            (punch_out - punch_in).total_seconds() / 3600, 2
                         )
-                    else:
-                        skipped_duplicate += 1
+
+                    # Update status
+                    existing.status = self._derive_status(record)
+                    existing.synced_at = datetime.utcnow()
+                    updated_count += 1
+
+                    logger.info(
+                        "Updated: employee_id=%s date=%s punch_in=%s punch_out=%s",
+                        employee_id, att_date, punch_in, punch_out,
+                    )
+
                 except Exception as e:
-                    logger.error("Error updating existing record: %s", e)
-                    skipped_duplicate += 1
+                    logger.error(
+                        "Error updating employee_id=%s date=%s: %s",
+                        employee_id, att_date, e
+                    )
                 continue
 
             # Transform and create attendance record
