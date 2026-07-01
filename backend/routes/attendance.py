@@ -364,19 +364,38 @@ def sync_attendance(
                 return None
 
             if in_time_str:
-                t = _parse_time_string(in_time_str)
+                in_time_clean = str(in_time_str).strip()
+                t = _parse_time_string(in_time_clean)
                 if t:
                     punch_in = datetime.combine(att_date, t)
+                else:
+                    logger.warning(
+                        "PARSE FAIL in_time: raw=%r type=%s cleaned=%r",
+                        in_time_str, type(in_time_str).__name__, in_time_clean,
+                    )
 
             if out_time_str:
-                t = _parse_time_string(out_time_str)
+                out_time_clean = str(out_time_str).strip()
+                t = _parse_time_string(out_time_clean)
                 if t:
                     punch_out = datetime.combine(att_date, t)
+                else:
+                    logger.warning(
+                        "PARSE FAIL out_time: raw=%r type=%s cleaned=%r",
+                        out_time_str, type(out_time_str).__name__, out_time_clean,
+                    )
 
             # Calculate hours worked
             hours_worked = None
             if punch_in and punch_out:
                 hours_worked = round((punch_out - punch_in).total_seconds() / 3600, 2)
+
+            # Log first 3 records for diagnostics
+            if created + updated < 3:
+                logger.info(
+                    "RECORD DEBUG: emp=%s date=%s in_raw=%r punch_in=%s out_raw=%r punch_out=%s hours=%s",
+                    employee_id, att_date, in_time_str, punch_in, out_time_str, punch_out, hours_worked,
+                )
 
             # Check for existing record (unique: employee_id + date)
             existing = (
@@ -389,10 +408,13 @@ def sync_attendance(
             )
 
             if existing:
-                # Update existing record
-                existing.punch_in = punch_in or existing.punch_in
-                existing.punch_out = punch_out or existing.punch_out
-                existing.hours_worked = hours_worked or existing.hours_worked
+                # Update existing record — use `is not None` to avoid dropping 0.0 values
+                if punch_in is not None:
+                    existing.punch_in = punch_in
+                if punch_out is not None:
+                    existing.punch_out = punch_out
+                if hours_worked is not None:
+                    existing.hours_worked = hours_worked
                 existing.status = status.lower() if status else existing.status
                 existing.source = "essl"
                 existing.source_employee_id = ext_id
@@ -419,6 +441,11 @@ def sync_attendance(
             logger.error("Error processing record: %s", e)
 
     db.commit()
+
+    logger.info(
+        "Sync complete: processed=%d created=%d updated=%d unmapped=%d errors=%d",
+        len(records), created, updated, unmapped, errors,
+    )
 
     return {
         "success": True,
