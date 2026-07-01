@@ -556,7 +556,8 @@ class ESSLSync:
 
         time_str = str(time_str).strip()
 
-        if not time_str:
+        # Microsoft Access null datetime — treat as None
+        if not time_str or time_str.startswith('1900-01'):
             return None
 
         # Try full datetime strings first (sent by sync_agent)
