@@ -314,6 +314,7 @@ def sync_attendance(
     created = 0
     updated = 0
     unmapped = 0
+    unmapped_records = []
     errors = 0
 
     for rec in records:
@@ -328,6 +329,10 @@ def sync_attendance(
             employee_id = mapping_lookup.get(ext_id)
             if not employee_id:
                 unmapped += 1
+                unmapped_records.append({
+                    "external_employee_id": ext_id,
+                    "attendance_date": att_date_str,
+                })
                 continue
 
             # Parse date
@@ -416,6 +421,7 @@ def sync_attendance(
         "updated": updated,
         "unmapped": unmapped,
         "errors": errors,
+        "unmapped_records": unmapped_records,
     }
 
 
