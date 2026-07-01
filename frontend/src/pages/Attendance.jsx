@@ -17,6 +17,13 @@ const fmt = (dt) => {
     return `${hourStr}:${minute} ${period}`
 }
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '--'
+const fmtHours = (h) => {
+    if (h == null) return '--'
+    const totalMinutes = Math.round(h * 60)
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    return `${hours}h ${minutes}m`
+}
 
 const SOURCE_LABELS = {
     manual: { label: 'Manual', color: '#6b7280', bg: '#f3f4f6' },
@@ -93,7 +100,7 @@ export default function Attendance({ user }) {
                         <td style={{ padding: '12px 14px', fontWeight: '500' }}>{fmtDate(row.date)}</td>
                         <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_in)}</td>
                         <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_out)}</td>
-                        <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{row.hours_worked != null ? `${row.hours_worked.toFixed(2)}h` : '--'}</td>
+                        <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{fmtHours(row.hours_worked)}</td>
                         <td style={{ padding: '12px 14px' }}><SourceBadge src={row.source} /></td>
                         <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '12px' }}>
                             {row.synced_at ? fmt(row.synced_at) : '--'}
@@ -158,7 +165,7 @@ export default function Attendance({ user }) {
                                             </p>
                                             <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
                                                 {status === 'punched_in' && `Since ${fmt(today.punch_in)}`}
-                                                {status === 'punched_out' && `${fmt(today.punch_in)} - ${fmt(today.punch_out)} (${today.hours_worked?.toFixed(2)}h)`}
+                                                {status === 'punched_out' && `${fmt(today.punch_in)} - ${fmt(today.punch_out)} (${fmtHours(today.hours_worked)})`}
                                                 {status === 'not_punched' && 'No record today'}
                                             </p>
                                         </div>
@@ -263,7 +270,7 @@ export default function Attendance({ user }) {
                                                     <td style={{ padding: '12px 14px', fontWeight: '600' }}>{row.employee}</td>
                                                     <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_in)}</td>
                                                     <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_out)}</td>
-                                                    <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{row.hours_worked != null ? `${row.hours_worked.toFixed(2)}h` : '--'}</td>
+                                                    <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{fmtHours(row.hours_worked)}</td>
                                                     <td style={{ padding: '12px 14px' }}><SourceBadge src={row.source} /></td>
                                                     <td style={{ padding: '12px 14px' }}>
                                                         <span style={{
