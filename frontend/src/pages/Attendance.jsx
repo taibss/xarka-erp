@@ -4,7 +4,18 @@ import API from '../api'
 import Layout from '../components/Layout'
 import { HiCog6Tooth } from 'react-icons/hi2'
 
-const fmt = (dt) => dt ? new Date(dt + 'Z').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--'
+const fmt = (dt) => {
+    if (!dt) return '--'
+    const match = String(dt).match(/(\d{2}):(\d{2})/)
+    if (!match) return '--'
+    let hour = parseInt(match[1], 10)
+    const minute = match[2]
+    const period = hour >= 12 ? 'PM' : 'AM'
+    hour = hour % 12
+    if (hour === 0) hour = 12
+    const hourStr = String(hour).padStart(2, '0')
+    return `${hourStr}:${minute} ${period}`
+}
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '--'
 
 const SOURCE_LABELS = {
