@@ -12,3 +12,5 @@ apscheduler
 jinja2
 msal
 requests
+openpyxl
+reportlab

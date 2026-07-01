@@ -34,6 +34,7 @@ from routes.settings import router as settings_router
 from routes.departments import router as departments_router
 from routes.designations import router as designations_router
 from routes.employee_management import router as employee_management_router
+from routes.reports import router as reports_router
 import os
 
 
@@ -80,6 +81,7 @@ app.include_router(settings_router)
 app.include_router(departments_router)
 app.include_router(designations_router)
 app.include_router(employee_management_router)
+app.include_router(reports_router)
 
 
 @app.get("/")

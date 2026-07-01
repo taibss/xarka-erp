@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, Date, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
@@ -22,3 +23,5 @@ class Attendance(Base):
     early_by = Column(Float, nullable=True)  # minutes left early
     synced_at = Column(DateTime, nullable=True)  # when biometric data was synced
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    employee = relationship("Employee", backref="attendances")
