@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import API from '../api'
 import Layout from '../components/Layout'
-import { HiUser, HiCalendar, HiTrash, HiCheckCircle, HiArrowPath, HiChatBubbleLeft, HiUserPlus, HiPlus, HiClock, HiExclamationTriangle, HiUserGroup, HiBolt } from 'react-icons/hi2'
+import { HiUser, HiCalendar, HiTrash, HiCheckCircle, HiArrowPath, HiChatBubbleLeft, HiUserPlus, HiPlus, HiClock, HiExclamationTriangle, HiUserGroup, HiBolt, HiShieldCheck, HiXCircle } from 'react-icons/hi2'
 
 const COLUMNS = [
     { id: 'todo', label: 'To Do', color: '#6b7280', bg: '#f9fafb' },
@@ -25,6 +25,9 @@ const ACTION_ICONS = {
     completed: HiCheckCircle,
     assigned: HiUserPlus,
     commented: HiChatBubbleLeft,
+    requested: HiClock,
+    approved: HiShieldCheck,
+    rejected: HiXCircle,
 }
 
 const ACTION_COLORS = {
@@ -33,6 +36,9 @@ const ACTION_COLORS = {
     completed: '#22c55e',
     assigned: '#8b5cf6',
     commented: '#6b7280',
+    requested: '#f59e0b',
+    approved: '#22c55e',
+    rejected: '#ef4444',
 }
 
 function fmtDate(d) {
@@ -131,7 +137,8 @@ export default function Kanban({ user }) {
         const dueToday = tasks.filter(t => t.due_date && new Date(t.due_date).toISOString().slice(0, 10) === today && t.status !== 'done').length
         const overdue = tasks.filter(t => isOverdue(t.due_date) && t.status !== 'done').length
         const completedWeek = tasks.filter(t => t.status === 'done' && t.updated_at && t.updated_at >= weekAgo).length
-        return { online, activeTasks, dueToday, overdue, completedWeek }
+        const pendingApprovals = tasks.filter(t => t.approval_status === 'pending').length
+        return { online, activeTasks, dueToday, overdue, completedWeek, pendingApprovals }
     }, [tasks, teamStatus])
 
     const stuckTasks = useMemo(() => {
@@ -152,9 +159,15 @@ export default function Kanban({ user }) {
         if (!draggedId) return
         const task = tasks.find(t => t.id === draggedId)
         if (!task || task.status === colId) { setDraggedId(null); return }
-        setTasks(prev => prev.map(t => t.id === draggedId ? { ...t, status: colId } : t))
+        setTasks(prev => prev.map(t => t.id === draggedId ? { ...t, status: colId, approval_status: isAdmin ? t.approval_status : 'pending', requested_status: colId } : t))
         setDraggedId(null)
-        try { await API.patch(`/tasks/${draggedId}/move`, { status: colId }); fetchActivity() } catch { fetchTasks() }
+        try {
+            const res = await API.patch(`/tasks/${draggedId}/move`, { status: colId })
+            if (!isAdmin && res.data.approval_status === 'pending') {
+                setTasks(prev => prev.map(t => t.id === draggedId ? { ...t, ...res.data } : t))
+            }
+            fetchActivity()
+        } catch { fetchTasks() }
     }
 
     const handleCreate = async () => {
@@ -237,13 +250,14 @@ export default function Kanban({ user }) {
                     <>
                         {/* ── Stats Row ── */}
                         {isAdmin && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '20px' }}>
                                 {[
                                     { label: 'Employees Online', value: stats.online, icon: <HiUserGroup size={18} />, color: '#22c55e' },
                                     { label: 'Active Tasks', value: stats.activeTasks, icon: <HiBolt size={18} />, color: '#3b82f6' },
                                     { label: 'Due Today', value: stats.dueToday, icon: <HiClock size={18} />, color: '#f59e0b' },
                                     { label: 'Overdue Tasks', value: stats.overdue, icon: <HiExclamationTriangle size={18} />, color: '#ef4444' },
                                     { label: 'Completed Week', value: stats.completedWeek, icon: <HiCheckCircle size={18} />, color: '#22c55e' },
+                                    { label: 'Pending Approvals', value: stats.pendingApprovals, icon: <HiShieldCheck size={18} />, color: '#8b5cf6' },
                                 ].map(s => (
                                     <div key={s.label} style={statCard}>
                                         <div style={{
@@ -308,6 +322,11 @@ export default function Kanban({ user }) {
                                                             <span style={{ background: pc.bg, color: pc.text, fontSize: '10px', padding: '2px 8px', borderRadius: '99px', textTransform: 'uppercase', fontWeight: '600', border: `1px solid ${pc.border}` }}>
                                                                 {task.priority}
                                                             </span>
+                                                            {task.approval_status === 'pending' && (
+                                                                <span style={{ background: '#f5f3ff', color: '#7c3aed', fontSize: '10px', padding: '2px 8px', borderRadius: '99px', fontWeight: '600', border: '1px solid #ddd6fe' }}>
+                                                                    Pending Approval
+                                                                </span>
+                                                            )}
                                                             {task.subtasks?.length > 0 && (
                                                                 <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '500' }}>
                                                                     {task.subtasks.filter(s => s.is_done).length}/{task.subtasks.length}
@@ -523,20 +542,41 @@ export default function Kanban({ user }) {
 
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ ...labelStyle, marginBottom: '8px' }}>Move to</label>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                {COLUMNS.map(col => (
-                                    <button key={col.id} onClick={async () => { await API.patch(`/tasks/${detailTask.id}/move`, { status: col.id }); await fetchTasks(); fetchActivity() }}
-                                        style={{
-                                            padding: '7px 12px', borderRadius: 'var(--radius-xs)', border: '1.5px solid',
-                                            borderColor: detailTask.status === col.id ? col.color : 'var(--border)',
-                                            background: detailTask.status === col.id ? col.color + '15' : 'var(--bg)',
-                                            color: detailTask.status === col.id ? col.color : 'var(--text-secondary)',
-                                            cursor: 'pointer', fontSize: '12px', fontWeight: '500',
-                                        }}>
-                                        {col.label}
+                            {isAdmin && detailTask.approval_status === 'pending' ? (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        {detailTask.requested_by_name} requests: <strong>{detailTask.requested_status}</strong>
+                                    </span>
+                                    <button onClick={async () => { await API.post(`/tasks/${detailTask.id}/approve`, { action: 'approve' }); await fetchTasks(); fetchActivity() }}
+                                        style={{ padding: '7px 14px', borderRadius: 'var(--radius-xs)', border: 'none', background: '#22c55e', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <HiShieldCheck size={13} /> Approve
                                     </button>
-                                ))}
-                            </div>
+                                    <button onClick={async () => { await API.post(`/tasks/${detailTask.id}/approve`, { action: 'reject' }); await fetchTasks(); fetchActivity() }}
+                                        style={{ padding: '7px 14px', borderRadius: 'var(--radius-xs)', border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <HiXCircle size={13} /> Reject
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    {COLUMNS.map(col => (
+                                        <button key={col.id} onClick={async () => { await API.patch(`/tasks/${detailTask.id}/move`, { status: col.id }); await fetchTasks(); fetchActivity() }}
+                                            style={{
+                                                padding: '7px 12px', borderRadius: 'var(--radius-xs)', border: '1.5px solid',
+                                                borderColor: detailTask.status === col.id ? col.color : 'var(--border)',
+                                                background: detailTask.status === col.id ? col.color + '15' : 'var(--bg)',
+                                                color: detailTask.status === col.id ? col.color : 'var(--text-secondary)',
+                                                cursor: 'pointer', fontSize: '12px', fontWeight: '500',
+                                            }}>
+                                            {col.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {!isAdmin && detailTask.approval_status === 'pending' && (
+                                <p style={{ marginTop: '8px', fontSize: '12px', color: '#7c3aed', fontWeight: '500' }}>
+                                    Approval requested — waiting for admin
+                                </p>
+                            )}
                         </div>
 
                         {detailTask.description && (

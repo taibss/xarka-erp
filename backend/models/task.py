@@ -13,6 +13,9 @@ class Task(Base):
     assignee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("employees.id"), nullable=False)
     due_date = Column(Date, nullable=True)
+    approval_status = Column(String, default=None)  # None | pending | approved | rejected
+    requested_status = Column(String, default=None)  # target status waiting for approval
+    requested_by = Column(Integer, ForeignKey("employees.id"), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

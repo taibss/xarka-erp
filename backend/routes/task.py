@@ -54,6 +54,7 @@ def _get_task_or_404(task_id: int, db: Session) -> Task:
 def _serialize_task(task: Task, db: Session) -> dict:
     assignee = db.query(Employee).filter(Employee.id == task.assignee_id).first() if task.assignee_id else None
     creator = db.query(Employee).filter(Employee.id == task.created_by).first()
+    requester = db.query(Employee).filter(Employee.id == task.requested_by).first() if task.requested_by else None
     comments = db.query(Comment).filter(Comment.task_id == task.id).order_by(Comment.created_at).all()
     subtasks = db.query(Subtask).filter(Subtask.task_id == task.id).order_by(Subtask.created_at).all()
 
@@ -65,6 +66,10 @@ def _serialize_task(task: Task, db: Session) -> dict:
         "priority": task.priority,
         "due_date": task.due_date,
         "created_at": task.created_at,
+        "approval_status": task.approval_status,
+        "requested_status": task.requested_status,
+        "requested_by": task.requested_by,
+        "requested_by_name": requester.name if requester else None,
         "assignee": {"id": assignee.id, "name": assignee.name} if assignee else None,
         "created_by": {"id": creator.id, "name": creator.name} if creator else None,
         "comments": [
@@ -218,22 +223,135 @@ def move_task(
     if not _can_modify_task(task, current_employee):
         raise HTTPException(status_code=403, detail="Not authorized to modify this task")
 
-    old_status = task.status
-    task.status = data.status
+    # Admin can move directly
+    if current_employee.role == "admin":
+        old_status = task.status
+        task.status = data.status
+        task.approval_status = None
+        task.requested_status = None
+        task.requested_by = None
+        db.commit()
+        db.refresh(task)
+
+        status_labels = {"todo": "To Do", "inprogress": "In Progress", "review": "Review", "done": "Done"}
+        log = ActivityLog(
+            employee_id=current_employee.id,
+            action="completed" if data.status == "done" else "moved",
+            task_id=task.id,
+            detail=f"moved to {status_labels.get(data.status, data.status)}" if data.status != "done" else f"completed '{task.title}'",
+        )
+        db.add(log)
+        db.commit()
+        return _serialize_task(task, db)
+
+    # Non-admin: create approval request instead of moving directly
+    if data.status == task.status:
+        return _serialize_task(task, db)
+
+    task.approval_status = "pending"
+    task.requested_status = data.status
+    task.requested_by = current_employee.id
     db.commit()
     db.refresh(task)
+
+    # Notify admin(s)
+    admins = db.query(Employee).filter(Employee.role == "admin", Employee.is_active == True).all()
+    for admin in admins:
+        if admin.id != current_employee.id:
+            create_notification(
+                db=db,
+                employee_id=admin.id,
+                title="Approval Required",
+                message=f"{current_employee.name} requests to move '{task.title}' to {data.status}",
+                notif_type="approval_required",
+                link="/kanban",
+            )
 
     status_labels = {"todo": "To Do", "inprogress": "In Progress", "review": "Review", "done": "Done"}
     log = ActivityLog(
         employee_id=current_employee.id,
-        action="completed" if data.status == "done" else "moved",
+        action="requested",
         task_id=task.id,
-        detail=f"moved to {status_labels.get(data.status, data.status)}" if data.status != "done" else f"completed '{task.title}'",
+        detail=f"requested move to {status_labels.get(data.status, data.status)}",
     )
     db.add(log)
     db.commit()
 
     return _serialize_task(task, db)
+
+
+class ApprovalAction(BaseModel):
+    action: str  # "approve" or "reject"
+
+
+@router.post("/tasks/{task_id}/approve")
+def approve_task(
+    task_id: int,
+    data: ApprovalAction,
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_employee),
+):
+    if current_employee.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can approve task moves")
+
+    task = _get_task_or_404(task_id, db)
+    if task.approval_status != "pending":
+        raise HTTPException(status_code=400, detail="No pending approval for this task")
+
+    if data.action == "approve":
+        task.status = task.requested_status
+        task.approval_status = None
+        task.requested_status = None
+        task.requested_by = None
+        action_type = "approved"
+        detail_msg = f"approved move to {task.status}"
+    elif data.action == "reject":
+        task.approval_status = None
+        task.requested_status = None
+        task.requested_by = None
+        action_type = "rejected"
+        detail_msg = "rejected status change request"
+    else:
+        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
+
+    db.commit()
+    db.refresh(task)
+
+    log = ActivityLog(
+        employee_id=current_employee.id,
+        action=action_type,
+        task_id=task.id,
+        detail=detail_msg,
+    )
+    db.add(log)
+
+    # Notify the requester
+    if task.requested_by and task.requested_by != current_employee.id:
+        create_notification(
+            db=db,
+            employee_id=task.requested_by,
+            title=f"Request {data.action.title()}d",
+            message=f"Your request to move '{task.title}' was {data.action}d by {current_employee.name}",
+            notif_type=f"task_{data.action}d",
+            link="/kanban",
+        )
+
+    db.commit()
+    return _serialize_task(task, db)
+
+
+@router.get("/tasks/pending-approvals")
+def get_pending_approvals(
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_employee),
+):
+    if current_employee.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    tasks = db.query(Task).filter(
+        Task.approval_status == "pending"
+    ).order_by(Task.created_at.desc()).all()
+    return [_serialize_task(t, db) for t in tasks]
 
 
 @router.delete("/tasks/{task_id}")
