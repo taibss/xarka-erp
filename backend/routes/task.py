@@ -65,7 +65,7 @@ def _serialize_task(task: Task, db: Session) -> dict:
         "status": task.status,
         "priority": task.priority,
         "due_date": task.due_date,
-        "created_at": task.created_at,
+        "created_at": task.created_at.isoformat() + "Z" if task.created_at else None,
         "approval_status": task.approval_status,
         "requested_status": task.requested_status,
         "requested_by": task.requested_by,
@@ -76,7 +76,7 @@ def _serialize_task(task: Task, db: Session) -> dict:
             {
                 "id": c.id,
                 "content": c.content,
-                "created_at": c.created_at,
+                "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
                 "author": db.query(Employee).filter(Employee.id == c.author_id).first().name
             }
             for c in comments
@@ -405,7 +405,7 @@ def add_comment(
             link="/kanban",
         )
 
-    return {"id": comment.id, "content": comment.content, "created_at": comment.created_at, "author": current_employee.name}
+    return {"id": comment.id, "content": comment.content, "created_at": comment.created_at.isoformat() + "Z" if comment.created_at else None, "author": current_employee.name}
 
 
 @router.post("/tasks/{task_id}/subtasks")

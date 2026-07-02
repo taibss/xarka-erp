@@ -32,7 +32,7 @@ def get_recent_activity(
             "action": log.action,
             "task_title": task_title,
             "detail": log.detail,
-            "created_at": log.created_at,
+            "created_at": log.created_at.isoformat() + "Z" if log.created_at else None,
         })
 
     return result
