@@ -4,6 +4,26 @@ import API from "../api"
 import Layout from "../components/Layout"
 import { HiMagnifyingGlass, HiPhone } from "react-icons/hi2"
 
+const fmt = (dt) => {
+    if (!dt) return '--'
+    const match = String(dt).match(/(\d{2}):(\d{2})/)
+    if (!match) return '--'
+    let hour = parseInt(match[1], 10)
+    const minute = match[2]
+    const period = hour >= 12 ? 'PM' : 'AM'
+    hour = hour % 12
+    if (hour === 0) hour = 12
+    const hourStr = String(hour).padStart(2, '0')
+    return `${hourStr}:${minute} ${period}`
+}
+const fmtHours = (h) => {
+    if (h == null) return '--'
+    const totalMinutes = Math.round(h * 60)
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    return `${hours}h ${minutes}m`
+}
+
 export default function Directory({ user }) {
     const [employees, setEmployees] = useState([])
     const [search, setSearch] = useState("")
@@ -144,7 +164,14 @@ export default function Directory({ user }) {
                         {filtered.map(emp => (
                             <div
                                 key={emp.id}
-                                onClick={() => setSelected(emp)}
+                                onClick={() => {
+                                    setSelected(emp)
+                                    API.get(`/directory/${emp.id}`).then(r => {
+                                        setSelected(prev => ({ ...prev, ...r.data }))
+                                    }).catch(e => {
+                                        console.error("Failed to load employee profile:", e)
+                                    })
+                                }}
                                 style={{
                                     background: "var(--bg-card)",
                                     borderRadius: "var(--radius)",
@@ -245,7 +272,7 @@ export default function Directory({ user }) {
                             {selected.name}
                         </div>
                         <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "20px" }}>
-                            {selected.role} · {selected.department}
+                            {selected.role}{selected.department ? ` · ${selected.department}` : ''}
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", color: "var(--text-secondary)" }}>
@@ -257,17 +284,88 @@ export default function Directory({ user }) {
                                 {selected.phone || "—"}
                             </div>
                         </div>
-                        <div style={{
-                            display: "inline-block",
-                            padding: "6px 14px",
-                            borderRadius: "99px",
-                            background: statusBg(selected.status),
-                            color: statusColor(selected.status),
-                            fontSize: "13px",
-                            fontWeight: "500",
-                        }}>
-                            {selected.status}
-                        </div>
+                        {selected.status === "On Leave" && (
+                            <div style={{
+                                display: "inline-block",
+                                padding: "6px 14px",
+                                borderRadius: "99px",
+                                background: statusBg(selected.status),
+                                color: statusColor(selected.status),
+                                fontSize: "13px",
+                                fontWeight: "500",
+                                marginBottom: "20px",
+                            }}>
+                                {selected.status}
+                            </div>
+                        )}
+                        {selected.stats && (
+                            <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                                {[
+                                    { label: "Hours this month", value: selected.stats.hours_this_month },
+                                    { label: "Tasks pending", value: selected.stats.tasks_pending },
+                                    { label: "Tasks completed", value: selected.stats.tasks_completed },
+                                ].map((item, i) => (
+                                    <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                                        <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--text)" }}>{item.value}</div>
+                                        <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{item.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {selected.attendance && selected.attendance.length > 0 && (
+                            <div style={{ marginTop: "8px", marginBottom: "20px" }}>
+                                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text)", marginBottom: "10px" }}>Attendance — Last 7 Days</div>
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                    {selected.attendance.map((a, i) => {
+                                        const dateObj = new Date(a.date + 'T00:00:00')
+                                        const formattedDate = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                                        return (
+                                            <div key={i} style={{ padding: "10px 0", borderBottom: i < selected.attendance.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+                                                <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)", marginBottom: "4px" }}>{formattedDate}</div>
+                                                <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                                                    {fmt(a.punch_in)} → {fmt(a.punch_out)} · <span style={{ color: "var(--info)", fontWeight: "500" }}>{fmtHours(a.hours_worked)}</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        {selected.tasks && selected.tasks.length > 0 && (
+                            <div style={{ marginTop: "8px", marginBottom: "20px" }}>
+                                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text)", marginBottom: "10px" }}>Tasks</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                    {selected.tasks.map(t => {
+                                        const dotColor = t.status === "todo" ? "#9ca3af" : t.status === "inprogress" ? "var(--info)" : "var(--warning)"
+                                        return (
+                                            <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+                                                    <span style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                                                </div>
+                                                {t.due_date && <span style={{ color: "var(--text-muted)", flexShrink: 0, marginLeft: "8px" }}>{t.due_date}</span>}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={() => navigate(`/reports?employee_id=${selected.id}`)}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                borderRadius: "var(--radius-xs)",
+                                border: "none",
+                                background: "var(--accent)",
+                                color: "#fff",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Download Attendance Report
+                        </button>
                     </div>
                 )}
             </div>

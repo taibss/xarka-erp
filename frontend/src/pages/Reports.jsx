@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import API from '../api'
 import Layout from '../components/Layout'
 import { HiDocumentArrowDown } from 'react-icons/hi2'
 
 export default function Reports({ user }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [employees, setEmployees] = useState([])
   const [startDate, setStartDate] = useState(() => {
     const now = new Date()
@@ -15,7 +16,7 @@ export default function Reports({ user }) {
     const now = new Date()
     return now.toISOString().split('T')[0]
   })
-  const [selectedEmpId, setSelectedEmpId] = useState('')
+  const [selectedEmpId, setSelectedEmpId] = useState(searchParams.get('employee_id') || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
