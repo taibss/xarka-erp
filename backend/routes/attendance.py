@@ -15,8 +15,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 WORK_START_HOUR = 10
-LATE_THRESHOLD_HOUR = 11
-LATE_THRESHOLD_MINUTE = 30  # late if punch_in after 11:30am
 
 
 @router.post("/attendance/punchin")
@@ -34,19 +32,9 @@ def punch_in(
         raise HTTPException(status_code=400, detail="Already punched in today")
 
     now = datetime.utcnow()
-    ist_offset = timedelta(hours=5, minutes=30)
-    now_ist = datetime.now(timezone(ist_offset))
-    is_late = now_ist.hour > LATE_THRESHOLD_HOUR or (now_ist.hour == LATE_THRESHOLD_HOUR and now_ist.minute > LATE_THRESHOLD_MINUTE)
-
-    late_by = None
-    if is_late:
-        work_start = now_ist.replace(hour=LATE_THRESHOLD_HOUR, minute=LATE_THRESHOLD_MINUTE, second=0, microsecond=0)
-        late_by = round((now_ist - work_start).total_seconds() / 60, 1)
 
     if existing:
         existing.punch_in = now
-        existing.is_late = is_late
-        existing.late_by = late_by
         existing.status = "present"
         existing.source = "manual"
     else:
@@ -54,15 +42,13 @@ def punch_in(
             employee_id=current_employee.id,
             date=today,
             punch_in=now,
-            is_late=is_late,
-            late_by=late_by,
             status="present",
             source="manual",
         )
         db.add(attendance)
 
     db.commit()
-    return {"message": "Punched in", "time": now.isoformat(), "is_late": is_late}
+    return {"message": "Punched in", "time": now.isoformat()}
 
 
 @router.post("/attendance/punchout")
@@ -122,7 +108,6 @@ def get_today(
             "punch_in": attendance.punch_in.isoformat(),
             "punch_out": attendance.punch_out.isoformat(),
             "hours_worked": attendance.hours_worked,
-            "is_late": attendance.is_late,
             "source": attendance.source or "manual",
         }
 
@@ -130,7 +115,6 @@ def get_today(
         return {
             "status": "punched_in",
             "punch_in": attendance.punch_in.isoformat(),
-            "is_late": attendance.is_late,
             "source": attendance.source or "manual",
         }
 
@@ -155,7 +139,6 @@ def get_history(
             "punch_in": r.punch_in.isoformat() if r.punch_in else None,
             "punch_out": r.punch_out.isoformat() if r.punch_out else None,
             "hours_worked": r.hours_worked,
-            "is_late": r.is_late,
             "source": r.source or "manual",
             "synced_at": r.synced_at.isoformat() if r.synced_at else None,
         }
@@ -180,7 +163,6 @@ def admin_view(
             "punch_in": r.punch_in.isoformat() if r.punch_in else None,
             "punch_out": r.punch_out.isoformat() if r.punch_out else None,
             "hours_worked": r.hours_worked,
-            "is_late": r.is_late,
             "is_in_office": r.punch_in and not r.punch_out,
             "source": r.source or "manual",
             "synced_at": r.synced_at.isoformat() if r.synced_at else None,
@@ -225,7 +207,6 @@ def admin_employee_history(
                 "punch_in": r.punch_in.isoformat() if r.punch_in else None,
                 "punch_out": r.punch_out.isoformat() if r.punch_out else None,
                 "hours_worked": r.hours_worked,
-                "is_late": r.is_late,
                 "source": r.source or "manual",
                 "synced_at": r.synced_at.isoformat() if r.synced_at else None,
             }
@@ -542,7 +523,6 @@ def sync_biometric(
                 "in_time": log.get("in_time"),
                 "out_time": log.get("out_time"),
                 "duration": log.get("duration"),
-                "late_by": log.get("late_by", 0),
                 "early_by": log.get("early_by", 0),
                 "status": log.get("status", "Present"),
                 "present": bool(log.get("present", 1)),

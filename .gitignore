@@ -44,3 +44,5 @@ htmlcov/
 
 # Misc
 *.sqlite3
+backend/xarka_erp.db
+xarka_erp_backup.sql

@@ -191,7 +191,6 @@ class MDBReader:
                     "in_time": str(row.InTime) if row.InTime else "",
                     "out_time": str(row.OutTime) if row.OutTime else "",
                     "duration": float(row.Duration) if row.Duration else 0,
-                    "late_by": float(row.LateBy) if row.LateBy else 0,
                     "early_by": float(row.EarlyBy) if row.EarlyBy else 0,
                     "status": str(row.Status) if row.Status else "",
                     "present": int(row.Present) if row.Present else 0,

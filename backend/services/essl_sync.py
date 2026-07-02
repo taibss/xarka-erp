@@ -518,10 +518,6 @@ class ESSLSync:
         # Derive status
         status = self._derive_status(record)
 
-        # Determine if late
-        late_by = record.get("late_by") or 0.0
-        is_late = late_by > 0
-
         return Attendance(
             employee_id=record["employee_id"],
             date=att_date,
@@ -529,10 +525,8 @@ class ESSLSync:
             punch_in=punch_in,
             punch_out=punch_out,
             hours_worked=record.get("duration"),
-            is_late=is_late,
             source="essl",
             source_employee_id=str(record["external_employee_id"]),
-            late_by=late_by,
             early_by=record.get("early_by") or 0.0,
             synced_at=datetime.utcnow(),
         )

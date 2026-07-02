@@ -35,7 +35,6 @@ def admin_dashboard(
     today_records = db.query(Attendance).filter(Attendance.date == today).all()
     present_today = len([r for r in today_records if r.punch_in])
     absent_today = total_employees - present_today
-    late_today = len([r for r in today_records if r.is_late])
     in_office = len([r for r in today_records if r.punch_in and not r.punch_out])
 
     # ── Attendance trend (last 30 days) ───────────────────────────────────────
@@ -47,11 +46,9 @@ def admin_dashboard(
     for r in trend_records:
         d = r.date.isoformat()
         if d not in trend_map:
-            trend_map[d] = {"date": d, "present": 0, "absent": 0, "late": 0}
+            trend_map[d] = {"date": d, "present": 0, "absent": 0}
         if r.punch_in:
             trend_map[d]["present"] += 1
-        if r.is_late:
-            trend_map[d]["late"] += 1
     for d_str, vals in trend_map.items():
         vals["absent"] = total_employees - vals["present"]
     attendance_trend = [trend_map[d.isoformat()] for d in
@@ -202,7 +199,6 @@ def admin_dashboard(
         "attendance": {
             "present": present_today,
             "absent": absent_today,
-            "late": late_today,
             "in_office": in_office,
             "attendance_rate": attendance_rate,
         },

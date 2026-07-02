@@ -10,6 +10,8 @@ from models.employee import Employee
 from utils.auth_utils import require_admin
 from services.report_generator import (
     build_rows,
+    build_summary,
+    build_per_employee_summary,
     generate_attendance_excel,
     generate_attendance_pdf,
 )
@@ -57,13 +59,14 @@ def get_attendance_report(
         employee_label = "All Employees"
 
     rows = build_rows(records)
+    summary = build_summary(rows) if employee_id else build_per_employee_summary(rows)
 
     if format == "xlsx":
-        output = generate_attendance_excel(rows, start_date, end_date, employee_label)
+        output = generate_attendance_excel(rows, start_date, end_date, employee_label, summary)
         filename = f"attendance_report_{start_date}_to_{end_date}.xlsx"
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     else:
-        output = generate_attendance_pdf(rows, start_date, end_date, employee_label)
+        output = generate_attendance_pdf(rows, start_date, end_date, employee_label, summary)
         filename = f"attendance_report_{start_date}_to_{end_date}.pdf"
         media_type = "application/pdf"
 

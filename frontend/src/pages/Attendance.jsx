@@ -121,15 +121,6 @@ export default function Attendance({ user }) {
                             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                     </div>
-                    {user?.role === 'admin' && (
-                        <button onClick={() => navigate('/settings')} style={{
-                            padding: '8px 16px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border)',
-                            background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '500',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-                        }}>
-                            <HiCog6Tooth size={14} /> Integration Settings
-                        </button>
-                    )}
                 </div>
 
                 {/* Tabs for admin */}
