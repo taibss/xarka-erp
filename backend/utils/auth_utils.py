@@ -51,6 +51,8 @@ def get_current_employee(
     employee = db.query(Employee).filter(Employee.email == email).first()
     if not employee:
         raise HTTPException(status_code=401, detail="Employee not found")
+    if not employee.is_active:
+        raise HTTPException(status_code=401, detail="Account is deactivated. Contact admin.")
     return employee
 
 def require_admin(
