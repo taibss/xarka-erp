@@ -12,9 +12,9 @@ const navItems = [
   { icon: HiMegaphone, label: 'Announcements', route: '/announcements' },
   { icon: HiCalendar, label: 'Meetings', route: '/meetings' },
   { icon: HiUserGroup, label: 'Directory', route: '/directory' },
-  { icon: HiUser, label: 'My Profile', route: '/profile' },
   { icon: HiBriefcase, label: 'Designations', route: '/designations', adminOnly: true },
   { icon: HiDocumentChartBar, label: 'Reports', route: '/reports', adminOnly: true },
+  { icon: HiUser, label: 'My Profile', route: '/profile' },
 ]
 
 const homeItem = { icon: HiHome, label: 'Home', route: '/dashboard' }
@@ -25,6 +25,7 @@ export default function Layout({ children, user, onLogout }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return
@@ -153,7 +154,7 @@ export default function Layout({ children, user, onLogout }) {
 
           {/* Logout */}
           <div
-            onClick={() => { if (window.confirm('Are you sure you want to logout?')) onLogout() }}
+            onClick={() => setShowLogoutConfirm(true)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -181,6 +182,20 @@ export default function Layout({ children, user, onLogout }) {
       }}>
         {children}
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setShowLogoutConfirm(false)}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '28px', width: '100%', maxWidth: '360px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-light)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '17px', fontWeight: '600', color: 'var(--text)', margin: '0 0 8px' }}>Logout</h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 24px' }}>Are you sure you want to logout?</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ padding: '9px 18px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout() }} style={{ padding: '9px 18px', borderRadius: 'var(--radius-xs)', border: 'none', background: 'var(--bg-dark)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

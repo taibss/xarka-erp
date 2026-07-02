@@ -57,7 +57,7 @@ export default function Login() {
             marginBottom: '16px',
           }}>X</div>
           <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px' }}>
-            XARKA <span style={{ color: 'var(--accent)' }}>Outbound</span>
+            Xarka ERP
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Sign in to your account</p>
         </div>

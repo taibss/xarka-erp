@@ -111,13 +111,7 @@ export default function AdminDashboard({ user }) {
             sub: `+${data.new_employees_month || 0} this month`,
             icon: HiUserGroup,
             color: GREEN,
-        },
-        {
-            label: 'In Office Today',
-            value: a.in_office,
-            sub: `${a.attendance_rate}% attendance rate`,
-            icon: HiBuildingOffice2,
-            color: GREEN_LIGHT,
+            onClick: () => navigate('/directory'),
         },
         {
             label: 'Tasks In Progress',
@@ -125,6 +119,7 @@ export default function AdminDashboard({ user }) {
             sub: `${t.overdue} overdue`,
             icon: HiClipboardDocumentList,
             color: GREEN_MINT,
+            onClick: () => navigate('/kanban'),
         },
         {
             label: 'Pending Leaves',
@@ -132,6 +127,7 @@ export default function AdminDashboard({ user }) {
             sub: 'Awaiting review',
             icon: HiCalendarDays,
             color: '#f59e0b',
+            onClick: () => navigate('/leave'),
         },
     ]
 
@@ -187,9 +183,9 @@ export default function AdminDashboard({ user }) {
                 </div>
 
                 {/* ── Row 1: Stat Cards ──────────────────────────────────────── */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
                     {stats.map(s => (
-                        <div key={s.label} style={card}>
+                        <div key={s.label} style={{ ...card, cursor: s.onClick ? 'pointer' : 'default' }} onClick={s.onClick}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>{s.label}</p>
