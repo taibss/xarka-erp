@@ -12,7 +12,6 @@ router = APIRouter()
 class UpdateProfileInput(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
-    department: Optional[str] = None
 
 
 class UpdatePasswordInput(BaseModel):
@@ -46,8 +45,6 @@ def update_my_profile(
         current_employee.name = data.name
     if data.phone:
         current_employee.phone = data.phone
-    if data.department:
-        current_employee.department = data.department
     db.commit()
     return {"message": "Profile updated successfully"}
 

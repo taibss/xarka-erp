@@ -64,7 +64,7 @@ export default function Reports({ user }) {
   const card = { background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '28px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }
 
   const inputStyle = {
-    flex: 1,
+    maxWidth: '190px',
     padding: '8px 12px',
     borderRadius: 'var(--radius-xs)',
     border: '1px solid var(--border)',

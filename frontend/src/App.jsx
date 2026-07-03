@@ -14,12 +14,14 @@ import Meetings from './pages/Meetings'
 import EmployeeManagement from './pages/EmployeeManagement'
 import DesignationManagement from './pages/DesignationManagement'
 import Reports from './pages/Reports'
+import AuthCallback from './pages/AuthCallback'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
         <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
