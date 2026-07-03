@@ -21,40 +21,35 @@ const homeItem = { icon: HiHome, label: 'Home', route: '/admin' }
 const teamDashItem = { icon: HiChartPie, label: 'Team Dashboard', route: '/admin' }
 const employeeMgmtItem = { icon: HiUserGroup, label: 'Manage Employees', route: '/employees', adminOnly: true }
 
-const isMobile = () => window.innerWidth <= 768
-
 export default function Layout({ children, user, onLogout }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [unreadCount, setUnreadCount] = useState(0)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return
     API.get('/notifications/unread').then(r => setUnreadCount(r.data.count)).catch(() => { })
   }, [location.pathname])
 
-  // Close sidebar on route change (mobile)
-  useEffect(() => { setSidebarOpen(false) }, [location.pathname])
+  const toggleSidebar = () => setSidebarOpen(prev => !prev)
 
   const navClick = (route) => {
     navigate(route)
-    setSidebarOpen(false)
   }
-
-  const navList = [user?.role === 'admin' ? teamDashItem : homeItem, ...(user?.role === 'admin' ? [employeeMgmtItem] : []), ...navItems].filter(item => !item.adminOnly || user?.role === 'admin')
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Hamburger — inside sidebar top-right when open, top-left when closed */}
+      {/* Hamburger — top-right of sidebar when open, top-left when closed */}
       <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
+        onClick={toggleSidebar}
+        className="sidebar-toggle"
         style={{
           position: 'fixed',
-          top: '16px',
-          left: sidebarOpen ? 'calc(var(--sidebar-width) - 44px)' : '16px',
-          zIndex: 110,
+          top: '24px',
+          left: sidebarOpen ? 'calc(var(--sidebar-width) - 48px)' : '16px',
+          zIndex: 9999,
           width: '36px', height: '36px', borderRadius: '10px',
           border: 'none',
           background: sidebarOpen ? 'rgba(255,255,255,0.08)' : 'var(--bg-dark)',
@@ -62,27 +57,27 @@ export default function Layout({ children, user, onLogout }) {
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.25s ease',
           boxShadow: sidebarOpen ? 'none' : 'var(--shadow)',
+          pointerEvents: 'auto',
         }}
-        onMouseEnter={e => e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.15)' : '#333'}
-        onMouseLeave={e => e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.08)' : 'var(--bg-dark)'}
+        onMouseEnter={e => { e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.15)' : '#333' }}
+        onMouseLeave={e => { e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.08)' : 'var(--bg-dark)' }}
       >
         <HiBars3 size={18} />
       </button>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 99,
-          }}
-        />
-      )}
+      {/* Overlay — mobile only */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? ' active' : ''}`}
+        onClick={toggleSidebar}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          zIndex: 99,
+        }}
+      />
 
       {/* Sidebar */}
       <aside
-        className={`app-sidebar${sidebarOpen ? ' sidebar-open' : ''}`}
+        className="app-sidebar"
         style={{
           width: 'var(--sidebar-width)',
           background: 'var(--bg-dark)',
@@ -226,12 +221,12 @@ export default function Layout({ children, user, onLogout }) {
       </aside>
 
       {/* Main content */}
-      <main style={{
+      <main className="app-main" style={{
         flex: 1,
-        marginLeft: sidebarOpen ? 'var(--sidebar-width)' : '0',
         minHeight: '100vh',
-        transition: 'margin-left 0.25s ease',
         paddingTop: '16px',
+        marginLeft: sidebarOpen ? 'var(--sidebar-width)' : '0',
+        transition: 'margin-left 0.25s ease',
       }}>
         {children}
       </main>

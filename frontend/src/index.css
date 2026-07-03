@@ -55,8 +55,30 @@ input, select, textarea, button {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+.sidebar-toggle {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+/* Desktop: no overlay */
+@media (min-width: 769px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Mobile: overlay, top padding for hamburger */
 @media (max-width: 768px) {
-  main {
+  .sidebar-overlay {
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .sidebar-overlay.active {
+    pointer-events: auto;
+    opacity: 1;
+  }
+  .app-main {
     padding-top: 56px;
   }
 }
