@@ -18,7 +18,7 @@ Tables of interest:
     - Employees (EnrollNumber, Name, Privilege, Enabled)
     - AttendanceLogs schema:
         AttendanceDate, EmployeeId, InTime, OutTime,
-        Duration, LateBy, EarlyBy, Status, Present, Absent
+        Duration, Status, Present, Absent
 
 Dependencies:
     - pyodbc (Windows only, requires Access ODBC driver)
@@ -117,8 +117,6 @@ class ESSLSync:
             InTime          — first punch-in time
             OutTime         — last punch-out time
             Duration        — hours worked (device-calculated)
-            LateBy          — minutes late (device-calculated)
-            EarlyBy         — minutes left early (device-calculated)
             Status          — attendance status from device
             Present         — 1 if present, 0 otherwise
             Absent          — 1 if absent, 0 otherwise
@@ -145,8 +143,6 @@ class ESSLSync:
                     "in_time": "09:05:00",
                     "out_time": "18:30:00",
                     "duration": 9.42,
-                    "late_by": 5.0,
-                    "early_by": 0.0,
                     "status": "Present",
                     "present": True,
                     "absent": False,
@@ -172,8 +168,6 @@ class ESSLSync:
                 "in_time": log["in_time"],
                 "out_time": log["out_time"],
                 "duration": log["duration"],
-                "late_by": log["late_by"],
-                "early_by": log["early_by"],
                 "status": log["status"],
                 "present": bool(log["present"]),
                 "absent": bool(log["absent"]),
@@ -213,7 +207,7 @@ class ESSLSync:
 
         Expected MDB table: AttendanceLogs
         Columns: AttendanceDate, EmployeeId, InTime, OutTime,
-                 Duration, LateBy, EarlyBy, Status, Present, Absent
+                 Duration, Status, Present, Absent
 
         Returns:
             List of raw log dicts from MDB.
@@ -225,7 +219,7 @@ class ESSLSync:
 
         query = (
             "SELECT AttendanceDate, EmployeeId, InTime, OutTime, "
-            "Duration, LateBy, EarlyBy, Status, Present, Absent "
+            "Duration, Status, Present, Absent "
             "FROM AttendanceLogs"
         )
         params = []
@@ -252,8 +246,6 @@ class ESSLSync:
                 "in_time": row.InTime,
                 "out_time": row.OutTime,
                 "duration": row.Duration,
-                "late_by": row.LateBy,
-                "early_by": row.EarlyBy,
                 "status": row.Status,
                 "present": row.Present,
                 "absent": row.Absent,
@@ -334,8 +326,6 @@ class ESSLSync:
             InTime             → punch_in (combined with AttendanceDate)
             OutTime            → punch_out (combined with AttendanceDate)
             Duration           → hours_worked
-            LateBy             → late_by, is_late (if > 0)
-            EarlyBy            → early_by
             Status             → status (lowercased)
             Present/Absent     → derived status if Status is empty
 
@@ -527,7 +517,6 @@ class ESSLSync:
             hours_worked=record.get("duration"),
             source="essl",
             source_employee_id=str(record["external_employee_id"]),
-            early_by=record.get("early_by") or 0.0,
             synced_at=datetime.utcnow(),
         )
 

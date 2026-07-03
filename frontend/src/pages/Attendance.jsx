@@ -41,7 +41,7 @@ export default function Attendance({ user }) {
     const [loading, setLoading] = useState(true)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
-    const [tab, setTab] = useState('me')
+    const [tab, setTab] = useState(user?.role === 'admin' ? 'team' : 'me')
     const navigate = useNavigate()
 
     const fetchToday = () => API.get('/attendance/today').then(r => setToday(r.data))
@@ -123,20 +123,6 @@ export default function Attendance({ user }) {
                     </div>
                 </div>
 
-                {/* Tabs for admin */}
-                {user?.role === 'admin' && (
-                    <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--bg-card)', padding: '4px', borderRadius: 'var(--radius-xs)', width: 'fit-content', border: '1px solid var(--border-light)' }}>
-                        {['me', 'team'].map(t => (
-                            <button key={t} onClick={() => setTab(t)} style={{
-                                padding: '8px 20px', borderRadius: 'var(--radius-xs)', border: 'none', cursor: 'pointer',
-                                background: tab === t ? 'var(--bg-dark)' : 'transparent',
-                                color: tab === t ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '500',
-                            }}>{t === 'me' ? 'My Attendance' : 'Team Attendance'}</button>
-                        ))}
-                    </div>
-                )}
-
-                {/* My Attendance Tab */}
                 {tab === 'me' && (
                     <>
                         <div style={{ ...card, marginBottom: '20px' }}>
@@ -223,7 +209,7 @@ export default function Attendance({ user }) {
                                         background: 'var(--bg)', color: 'var(--text)', outline: 'none',
                                     }}
                                 >
-                                    <option value="">All employees - Today's overview</option>
+                                    <option value="">All employees - Yesterday's overview</option>
                                     {employees.map(e => (
                                         <option key={e.id} value={e.id}>{e.name}</option>
                                     ))}
@@ -243,14 +229,14 @@ export default function Attendance({ user }) {
                             </div>
                         ) : (
                             <div style={card}>
-                                <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Today's Overview</h2>
+                                <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Yesterday's Overview</h2>
                                 {adminData.length === 0 ? (
-                                    <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px', fontSize: '13px' }}>No records today</p>
+                                    <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px', fontSize: '13px' }}>No records yesterday</p>
                                 ) : (
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                                         <thead>
                                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                                {['Employee', 'Punch In', 'Punch Out', 'Hours', 'Source', 'In Office'].map(h => (
+                                                {['Employee', 'Punch In', 'Punch Out', 'Hours', 'Source'].map(h => (
                                                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -263,16 +249,6 @@ export default function Attendance({ user }) {
                                                     <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{fmt(row.punch_out)}</td>
                                                     <td style={{ padding: '12px 14px', color: 'var(--info)', fontWeight: '500' }}>{fmtHours(row.hours_worked)}</td>
                                                     <td style={{ padding: '12px 14px' }}><SourceBadge src={row.source} /></td>
-                                                    <td style={{ padding: '12px 14px' }}>
-                                                        <span style={{
-                                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                                            color: row.is_in_office ? 'var(--success)' : 'var(--text-muted)',
-                                                            fontSize: '12px', fontWeight: '500',
-                                                        }}>
-                                                            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: row.is_in_office ? 'var(--success)' : 'var(--text-muted)' }} />
-                                                            {row.is_in_office ? 'In' : 'Out'}
-                                                        </span>
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

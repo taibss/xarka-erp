@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.attendance import Attendance
 from models.employee import Employee
+from models.integration_settings import IntegrationSettings
 from utils.auth_utils import get_current_employee, require_admin
 from datetime import datetime, date, timedelta, timezone
 from typing import Optional, List
@@ -70,14 +71,6 @@ def punch_out(
     now = datetime.utcnow()
     attendance.punch_out = now
     attendance.hours_worked = round((now - attendance.punch_in).total_seconds() / 3600, 2)
-
-    # Calculate early departure (assuming work ends at 19:00 IST)
-    ist_offset = timedelta(hours=5, minutes=30)
-    now_ist = datetime.now(timezone(ist_offset))
-    work_end_hour = 19
-    if now_ist.hour < work_end_hour:
-        early_by = round((work_end_hour * 60 - (now_ist.hour * 60 + now_ist.minute)) / 60, 1)
-        attendance.early_by = early_by
 
     db.commit()
 
@@ -152,7 +145,7 @@ def admin_view(
     current_employee: Employee = Depends(require_admin),
 ):
 
-    today = date.today()
+    today = date.today() - timedelta(days=1)
     records = db.query(Attendance).filter(Attendance.date == today).all()
 
     result = []
@@ -523,7 +516,6 @@ def sync_biometric(
                 "in_time": log.get("in_time"),
                 "out_time": log.get("out_time"),
                 "duration": log.get("duration"),
-                "early_by": log.get("early_by", 0),
                 "status": log.get("status", "Present"),
                 "present": bool(log.get("present", 1)),
                 "absent": bool(log.get("absent", 0)),
@@ -590,6 +582,21 @@ def sync_biometric(
 
     for error in summary["errors"]:
         logger.error("Sync error: %s", error)
+
+    setting = db.query(IntegrationSettings).filter(
+        IntegrationSettings.key == "last_successful_sync"
+    ).first()
+    now_str = datetime.now(timezone.utc).isoformat()
+    if setting:
+        setting.value = now_str
+    else:
+        setting = IntegrationSettings(
+            key="last_successful_sync",
+            value=now_str,
+            description="Timestamp of the last successful biometric sync run"
+        )
+        db.add(setting)
+    db.commit()
 
     return SyncBiometricResponse(
         success=True,

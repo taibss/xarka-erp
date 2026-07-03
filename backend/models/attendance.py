@@ -18,7 +18,6 @@ class Attendance(Base):
     # Biometric integration fields
     source = Column(String, default="manual")  # manual, essl, future_provider
     source_employee_id = Column(String, nullable=True)  # external biometric user ID
-    early_by = Column(Float, nullable=True)  # minutes left early
     synced_at = Column(DateTime, nullable=True)  # when biometric data was synced
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

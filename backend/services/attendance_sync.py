@@ -60,9 +60,7 @@ def sync_biometric_attendance(
            d. If this is the first punch of the day, set punch_in.
            e. If this is a later punch, update punch_out.
            f. Calculate hours_worked from punch_in to punch_out.
-           g. Calculate late_by (minutes after 11:30 IST threshold).
-           h. Calculate early_by (minutes before 19:00 IST end time).
-           i. Set source = provider_name, synced_at = datetime.utcnow().
+           g. Set source = provider_name, synced_at = datetime.utcnow().
         7. Commit all changes.
         8. Disconnect from provider.
         9. Return summary dict.

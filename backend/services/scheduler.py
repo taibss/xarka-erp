@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, date, timedelta, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import sessionmaker
@@ -8,6 +9,7 @@ from models.employee import Employee
 from models.attendance import Attendance
 from models.meeting import Meeting
 from models.meeting_attendee import MeetingAttendee
+from models.integration_settings import IntegrationSettings
 from services.notify import send_email
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -155,11 +157,67 @@ def meeting_reminder():
         db.close()
 
 
+def sync_health_check():
+    """Runs every hour. Alerts if biometric sync hasn't run in too long."""
+    db = SessionLocal()
+    try:
+        setting = db.query(IntegrationSettings).filter(
+            IntegrationSettings.key == "last_successful_sync"
+        ).first()
+
+        alert_email = os.getenv("SYNC_ALERT_EMAIL")
+        if not alert_email:
+            return
+
+        threshold_hours = 0.01
+
+        if not setting or not setting.value:
+            send_email(
+                alert_email,
+                "Xarka ERP: No biometric sync recorded yet",
+                "The biometric sync agent has never successfully reported in. "
+                "Check the Windows PC and sync_agent.py."
+            )
+            return
+
+        last_sync = datetime.fromisoformat(setting.value)
+        hours_since = (datetime.now(timezone.utc) - last_sync).total_seconds() / 3600
+
+        if hours_since > threshold_hours:
+            already_alerted = db.query(IntegrationSettings).filter(
+                IntegrationSettings.key == "last_sync_alert_sent"
+            ).first()
+            # Only alert once per stale period, not every hour
+            if already_alerted and already_alerted.value == setting.value:
+                return
+
+            send_email(
+                alert_email,
+                "Xarka ERP: Biometric sync is overdue",
+                f"No successful sync recorded in {hours_since:.1f} hours "
+                f"(last successful sync: {last_sync.isoformat()}). "
+                f"Check the Windows PC, sync_agent.py, and Task Scheduler."
+            )
+
+            if already_alerted:
+                already_alerted.value = setting.value
+            else:
+                db.add(IntegrationSettings(
+                    key="last_sync_alert_sent",
+                    value=setting.value,
+                    description="Tracks which last_successful_sync value we already alerted on"
+                ))
+            db.commit()
+    finally:
+        db.close()
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
     scheduler.add_job(daily_digest, "cron", hour=9, minute=0, id="daily_digest")
     scheduler.add_job(punch_in_reminder, "cron", hour=10, minute=0, id="punch_in_reminder")
     scheduler.add_job(punch_out_reminder, "cron", hour=18, minute=30, id="punch_out_reminder")
     scheduler.add_job(meeting_reminder, "interval", minutes=15, id="meeting_reminder")
+    scheduler.add_job(sync_health_check, "cron", minute=0, id="sync_health_check")
     scheduler.start()
-    print("[Scheduler] Started — digest at 9:00 AM, punch-in reminder at 10:00 AM, punch-out reminder at 6:30 PM, meeting reminder every 15 min IST")
+    print("[Scheduler] Started — digest at 9:00 AM, punch-in reminder at 10:00 AM, punch-out reminder at 6:30 PM, meeting reminder every 15 min IST, sync health check every hour")
