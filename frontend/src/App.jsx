@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Kanban from './pages/Kanban'
 import Leave from './pages/Leave'
@@ -22,7 +21,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
         <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
         <Route path="/leave" element={<ProtectedRoute><Leave /></ProtectedRoute>} />

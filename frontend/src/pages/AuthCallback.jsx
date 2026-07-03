@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getMe } from '../api'
 
 export default function AuthCallback() {
   const [params] = useSearchParams()
@@ -15,7 +16,11 @@ export default function AuthCallback() {
     }
     if (token) {
       localStorage.setItem('token', token)
-      navigate('/dashboard')
+      getMe()
+        .then(res => {
+          navigate('/admin')
+        })
+        .catch(() => navigate('/admin'))
     } else {
       navigate('/login')
     }

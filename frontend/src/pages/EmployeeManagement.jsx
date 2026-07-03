@@ -68,11 +68,13 @@ export default function EmployeeManagement({ user }) {
     setSaving(true); setMessage(null)
     try {
       const cleanInt = (v) => (v === '' || v === null || v === undefined) ? null : parseInt(v)
+      const cleanDate = (v) => (!v || v === '') ? null : v
       const payload = {
         ...form,
         department_id: cleanInt(form.department_id),
         designation_id: cleanInt(form.designation_id),
         manager_id: cleanInt(form.manager_id),
+        joining_date: cleanDate(form.joining_date),
       }
       if (editEmployee) {
         await API.put(`/employees/${editEmployee.id}`, payload)

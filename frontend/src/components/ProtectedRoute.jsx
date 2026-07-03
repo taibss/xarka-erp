@@ -22,7 +22,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
           return
         }
         if (adminOnly && res.data.role !== 'admin') {
-          navigate('/dashboard')
+          navigate('/admin')
           return
         }
         setLoading(false)

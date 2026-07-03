@@ -20,11 +20,7 @@ export default function Login() {
     try {
       const res = await login(email, password)
       localStorage.setItem('token', res.data.access_token)
-      if (res.data.employee?.role === 'admin') {
-        navigate('/admin')
-      } else {
-        navigate('/dashboard')
-      }
+      navigate('/admin')
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed')
     }
