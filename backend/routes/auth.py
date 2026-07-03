@@ -107,7 +107,8 @@ MS_CLIENT_ID = os.getenv("AZURE_CLIENT_ID")
 MS_CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
 MS_TENANT_ID = os.getenv("AZURE_TENANT_ID")
 MS_AUTHORITY = f"https://login.microsoftonline.com/{MS_TENANT_ID}"
-MS_SCOPES = ["openid", "profile", "email"]
+MS_SCOPES = ["openid", "profile", "email"]  # For the authorization URL
+MS_SCOPES_TOKEN = []  # MSAL adds openid/profile automatically; no extra scopes needed
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
@@ -160,42 +161,50 @@ def microsoft_callback(
     error_description: str = Query(None),
     db: Session = Depends(get_db),
 ):
-    if error:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error={error_description or error}")
+    import traceback
+    try:
+        if error:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error={error_description or error}")
 
-    if not state or not _verify_state_token(state):
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Invalid+or+expired+state")
+        if not state or not _verify_state_token(state):
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Invalid+or+expired+state")
 
-    if not code:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+authorization+code+received")
+        if not code:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+authorization+code+received")
 
-    # Exchange authorization code for tokens via MSAL
-    app = _get_msal_app()
-    result = app.acquire_token_by_authorization_code(
-        code,
-        scopes=MS_SCOPES,
-        redirect_uri=f"{BACKEND_URL}/auth/microsoft/callback",
-    )
-
-    if "error" in result:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/login?error={result.get('error_description', 'Token exchange failed')}"
+        # Exchange authorization code for tokens via MSAL
+        app = _get_msal_app()
+        result = app.acquire_token_by_authorization_code(
+            code,
+            scopes=MS_SCOPES_TOKEN,
+            redirect_uri=f"{BACKEND_URL}/auth/microsoft/callback",
         )
 
-    id_token_claims = result.get("id_token_claims", {})
-    email = id_token_claims.get("preferred_username") or id_token_claims.get("email")
-    if not email:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+email+in+Microsoft+token")
+        if "error" in result:
+            print(f"[MICROSOFT AUTH] Token exchange error: {result}", flush=True)
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/login?error={result.get('error_description', 'Token exchange failed')}"
+            )
 
-    # Tenant check (defense in depth — already enforced by authority URL)
-    if id_token_claims.get("tid") != MS_TENANT_ID:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Unauthorized+tenant")
+        id_token_claims = result.get("id_token_claims", {})
+        email = id_token_claims.get("preferred_username") or id_token_claims.get("email")
+        if not email:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+email+in+Microsoft+token")
 
-    employee = db.query(Employee).filter(Employee.email == email).first()
-    if not employee:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+account+found+for+{email}")
-    if not employee.is_active:
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Account+deactivated.+Contact+admin.")
+        # Tenant check (defense in depth — already enforced by authority URL)
+        if id_token_claims.get("tid") != MS_TENANT_ID:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Unauthorized+tenant")
 
-    token = create_access_token({"sub": employee.email})
-    return RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?token={token}")
+        employee = db.query(Employee).filter(Employee.email == email).first()
+        if not employee:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=No+account+found+for+{email}")
+        if not employee.is_active:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Account+deactivated.+Contact+admin.")
+
+        token = create_access_token({"sub": employee.email})
+        return RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?token={token}")
+    except Exception as e:
+        print(f"[MICROSOFT AUTH] UNHANDLED EXCEPTION: {e}", flush=True)
+        traceback.print_exc()
+        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=Server+error:+{str(e)}")
+
