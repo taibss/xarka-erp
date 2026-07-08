@@ -44,7 +44,7 @@ export default function EmployeeManagement({ user }) {
       (filter === 'inactive' && !e.is_active) ||
       (filter === 'admin' && e.role === 'admin')
     return matchSearch && matchFilter
-  })
+  }).sort((a, b) => (a.role === 'admin' ? -1 : 1) - (b.role === 'admin' ? -1 : 1))
 
   const openAdd = () => {
     setEditEmployee(null)
